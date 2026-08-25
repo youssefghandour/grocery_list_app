@@ -29,8 +29,13 @@ class _JoinHouseholdScreenState extends ConsumerState<JoinHouseholdScreen> {
         .read(householdControllerProvider.notifier)
         .joinHousehold(_codeController.text.trim());
 
+    if (!mounted) return;
+
     final error = ref.read(householdControllerProvider).error;
-    if (error != null && mounted) {
+    if (error == null) {
+      // Success - pop back to HomeScreen
+      Navigator.of(context).pop();
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(error.toString())),
       );

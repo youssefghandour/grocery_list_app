@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../constants/app_constants.dart';
 import '../constants/user_roles.dart';
 import '../models/grocery_item_model.dart';
+import '../models/grocery_list_model.dart';
 import '../models/household_model.dart';
 import '../models/user_model.dart';
 
@@ -68,8 +69,7 @@ class FirestoreService {
     return _users
         .where('householdId', isEqualTo: householdId)
         .snapshots()
-        .map((snapshot) =>
-            snapshot.docs.map(AppUser.fromFirestore).toList());
+        .map((snapshot) => snapshot.docs.map(AppUser.fromFirestore).toList());
   }
 
   // ---------------------------------------------------------------------------
@@ -97,6 +97,17 @@ class FirestoreService {
         'inviteCode': inviteCode,
         'createdBy': userId,
         'createdAt': Timestamp.fromDate(now),
+      });
+
+      // Create a default list for the new household
+      final defaultListRef = householdRef
+          .collection(AppConstants.listsSubcollection)
+          .doc();
+      transaction.set(defaultListRef, {
+        'name': 'Main List',
+        'createdBy': userId,
+        'createdAt': Timestamp.fromDate(now),
+        'isDefault': true,
       });
 
       transaction.set(_inviteCodes.doc(inviteCode), {
@@ -167,17 +178,58 @@ class FirestoreService {
   }
 
   // ---------------------------------------------------------------------------
-  // Grocery items (real-time subcollection)
+  // Grocery Lists
   // ---------------------------------------------------------------------------
 
-  CollectionReference<Map<String, dynamic>> _itemsCollection(String householdId) {
-    return _households
-        .doc(householdId)
+  CollectionReference<Map<String, dynamic>> _listsCollection(
+      String householdId) {
+    return _households.doc(householdId).collection(AppConstants.listsSubcollection);
+  }
+
+  Stream<List<GroceryList>> watchGroceryLists(String householdId) {
+    return _listsCollection(householdId)
+        .orderBy('createdAt', descending: false)
+        .snapshots()
+        .map((snapshot) =>
+            snapshot.docs.map(GroceryList.fromFirestore).toList());
+  }
+
+  Future<void> addGroceryList({
+    required String householdId,
+    required String name,
+    required String userId,
+  }) async {
+    final now = DateTime.now();
+    await _listsCollection(householdId).add({
+      'name': name.trim(),
+      'createdBy': userId,
+      'createdAt': Timestamp.fromDate(now),
+      'isDefault': false,
+    });
+  }
+
+  Future<void> deleteGroceryList({
+    required String householdId,
+    required String listId,
+  }) async {
+    // Note: In production, you'd also want to delete all items in this list
+    await _listsCollection(householdId).doc(listId).delete();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Grocery items (nested under lists)
+  // ---------------------------------------------------------------------------
+
+  CollectionReference<Map<String, dynamic>> _itemsCollection(
+      String householdId, String listId) {
+    return _listsCollection(householdId)
+        .doc(listId)
         .collection(AppConstants.itemsSubcollection);
   }
 
-  Stream<List<GroceryItem>> watchGroceryItems(String householdId) {
-    return _itemsCollection(householdId)
+  Stream<List<GroceryItem>> watchGroceryItems(
+      String householdId, String listId) {
+    return _itemsCollection(householdId, listId)
         .orderBy('createdAt', descending: false)
         .snapshots()
         .map((snapshot) =>
@@ -186,16 +238,24 @@ class FirestoreService {
 
   Future<void> addGroceryItem({
     required String householdId,
+    required String listId,
     required String name,
     required String quantity,
     required String addedBy,
+    String category = 'Other',
+    String unit = 'pcs',
+    double price = 0.0,
   }) async {
     final now = DateTime.now();
-    await _itemsCollection(householdId).add({
+    await _itemsCollection(householdId, listId).add({
+      'householdId': householdId, // Added for collectionGroup suggestions
       'name': name.trim(),
       'quantity': quantity.trim().isEmpty ? '1' : quantity.trim(),
       'isChecked': false,
       'addedBy': addedBy,
+      'category': category,
+      'unit': unit,
+      'price': price,
       'createdAt': Timestamp.fromDate(now),
       'updatedAt': Timestamp.fromDate(now),
     });
@@ -203,21 +263,26 @@ class FirestoreService {
 
   Future<void> updateGroceryItem({
     required String householdId,
+    required String listId,
     required GroceryItem item,
   }) async {
-    await _itemsCollection(householdId).doc(item.id).update({
+    await _itemsCollection(householdId, listId).doc(item.id).update({
       'name': item.name.trim(),
       'quantity': item.quantity.trim(),
       'isChecked': item.isChecked,
+      'category': item.category,
+      'unit': item.unit,
+      'price': item.price,
       'updatedAt': FieldValue.serverTimestamp(),
     });
   }
 
   Future<void> toggleGroceryItem({
     required String householdId,
+    required String listId,
     required GroceryItem item,
   }) async {
-    await _itemsCollection(householdId).doc(item.id).update({
+    await _itemsCollection(householdId, listId).doc(item.id).update({
       'isChecked': !item.isChecked,
       'updatedAt': FieldValue.serverTimestamp(),
     });
@@ -225,13 +290,14 @@ class FirestoreService {
 
   Future<void> deleteGroceryItem({
     required String householdId,
+    required String listId,
     required String itemId,
   }) async {
-    await _itemsCollection(householdId).doc(itemId).delete();
+    await _itemsCollection(householdId, listId).doc(itemId).delete();
   }
 
-  Future<void> clearCheckedItems(String householdId) async {
-    final snapshot = await _itemsCollection(householdId)
+  Future<void> clearCheckedItems(String householdId, String listId) async {
+    final snapshot = await _itemsCollection(householdId, listId)
         .where('isChecked', isEqualTo: true)
         .get();
 
@@ -240,5 +306,30 @@ class FirestoreService {
       batch.delete(doc.reference);
     }
     await batch.commit();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Smart Suggestions
+  // ---------------------------------------------------------------------------
+
+  /// Fetches unique item names previously added by the household for suggestions.
+  Stream<List<String>> watchSmartSuggestions(String householdId) {
+    // In a large app, we'd use a separate 'history' collection.
+    // For now, we'll query items across all lists in the household.
+    // Note: Firestore doesn't support 'distinct' queries well, so we'll process in-memory
+    // or just query a few recent items.
+    return _firestore
+        .collectionGroup(AppConstants.itemsSubcollection)
+        .where('householdId', isEqualTo: householdId) // We'd need to add this field to items for efficient group query
+        .limit(50)
+        .snapshots()
+        .map((snapshot) {
+      final names = snapshot.docs
+          .map((doc) => doc.data()['name'] as String)
+          .toSet()
+          .toList();
+      names.sort();
+      return names;
+    });
   }
 }

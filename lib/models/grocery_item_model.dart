@@ -9,6 +9,9 @@ class GroceryItem {
     required this.addedBy,
     required this.createdAt,
     required this.updatedAt,
+    this.category = 'Other',
+    this.unit = 'pcs',
+    this.price = 0.0,
   });
 
   final String id;
@@ -18,6 +21,9 @@ class GroceryItem {
   final String addedBy;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final String category;
+  final String unit;
+  final double price;
 
   factory GroceryItem.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data()!;
@@ -29,6 +35,9 @@ class GroceryItem {
       addedBy: data['addedBy'] as String? ?? '',
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      category: data['category'] as String? ?? 'Other',
+      unit: data['unit'] as String? ?? 'pcs',
+      price: (data['price'] as num?)?.toDouble() ?? 0.0,
     );
   }
 
@@ -40,6 +49,9 @@ class GroceryItem {
       'addedBy': addedBy,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
+      'category': category,
+      'unit': unit,
+      'price': price,
     };
   }
 
@@ -48,6 +60,9 @@ class GroceryItem {
     String? quantity,
     bool? isChecked,
     DateTime? updatedAt,
+    String? category,
+    String? unit,
+    double? price,
   }) {
     return GroceryItem(
       id: id,
@@ -57,6 +72,9 @@ class GroceryItem {
       addedBy: addedBy,
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      category: category ?? this.category,
+      unit: unit ?? this.unit,
+      price: price ?? this.price,
     );
   }
 }

@@ -28,8 +28,13 @@ class _CreateHouseholdScreenState extends ConsumerState<CreateHouseholdScreen> {
         .read(householdControllerProvider.notifier)
         .createHousehold(_nameController.text.trim());
 
+    if (!mounted) return;
+
     final error = ref.read(householdControllerProvider).error;
-    if (error != null && mounted) {
+    if (error == null) {
+      // Success - pop back to HomeScreen which will now show the grocery list
+      Navigator.of(context).pop();
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(error.toString())),
       );

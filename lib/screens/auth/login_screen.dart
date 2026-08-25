@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../providers/auth_provider.dart';
+import '../../providers/auth_provider.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -31,6 +31,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           _passwordController.text,
         );
 
+    if (!mounted) return;
+
     final error = ref.read(authControllerProvider).error;
     if (error != null && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -42,10 +44,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _signInWithGoogle() async {
     await ref.read(authControllerProvider.notifier).signInWithGoogle();
 
+    if (!mounted) return;
+
     final error = ref.read(authControllerProvider).error;
     if (error != null && mounted) {
+      String message = error.toString();
+      if (message.contains('DEVELOPER_ERROR')) {
+        message = 'Google Sign-In failed. Please ensure you have added your SHA-1 fingerprint to the Firebase Console.';
+      }
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString())),
+        SnackBar(
+          content: Text(message),
+          duration: const Duration(seconds: 5),
+          action: SnackBarAction(
+            label: 'OK',
+            onPressed: () {},
+          ),
+        ),
       );
     }
   }
@@ -148,6 +163,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ? null
                           : () => Navigator.pushNamed(context, '/register'),
                       child: const Text('Create an account'),
+                    ),
+                    const SizedBox(height: 24),
+                    const Divider(),
+                    const SizedBox(height: 16),
+                    Text(
+                      "Don't have a shared list yet?",
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.outline,
+                          ),
+                    ),
+                    const SizedBox(height: 12),
+                    FilledButton.tonalIcon(
+                      onPressed: isLoading
+                          ? null
+                          : () => Navigator.pushNamed(context, '/register'),
+                      icon: const Icon(Icons.add_task),
+                      label: const Text('Add to the lists'),
                     ),
                   ],
                 ),

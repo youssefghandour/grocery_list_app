@@ -34,8 +34,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           displayName: _nameController.text.trim(),
         );
 
+    if (!mounted) return;
+
     final error = ref.read(authControllerProvider).error;
-    if (error != null && mounted) {
+    if (error == null) {
+      // Success - pop back to the root where AuthGate will show HomeScreen
+      Navigator.of(context).pop();
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(error.toString())),
       );

@@ -26,32 +26,36 @@ class DefaultFirebaseOptions {
   }
 
   // Replace with values from Firebase Console → Project Settings.
+
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'YOUR_WEB_API_KEY',
-    appId: 'YOUR_WEB_APP_ID',
-    messagingSenderId: 'YOUR_MESSAGING_SENDER_ID',
-    projectId: 'YOUR_PROJECT_ID',
-    authDomain: 'YOUR_PROJECT_ID.firebaseapp.com',
-    storageBucket: 'YOUR_PROJECT_ID.appspot.com',
+    apiKey: 'AIzaSyC35pTOOm6njJaaX3YRimCYAoI-tUi6bkk',
+    appId: '1:207784872626:web:c6141cd89c4dc6ca0f17ab',
+    messagingSenderId: '207784872626',
+    projectId: 'animemusic-e8c09',
+    authDomain: 'animemusic-e8c09.firebaseapp.com',
+    databaseURL: 'https://animemusic-e8c09.firebaseio.com',
+    storageBucket: 'animemusic-e8c09.appspot.com',
+    measurementId: 'G-D7KWP9XE9V',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'YOUR_ANDROID_API_KEY',
-    appId: 'YOUR_ANDROID_APP_ID',
-    messagingSenderId: 'YOUR_MESSAGING_SENDER_ID',
-    projectId: 'YOUR_PROJECT_ID',
-    storageBucket: 'YOUR_PROJECT_ID.appspot.com',
+    apiKey: 'AIzaSyDzJxNfq-dqcuSPseWsTNA86Wv3MLbRtEs',
+    appId: '1:207784872626:android:095ebfd107b349e60f17ab',
+    messagingSenderId: '207784872626',
+    projectId: 'animemusic-e8c09',
+    databaseURL: 'https://animemusic-e8c09.firebaseio.com',
+    storageBucket: 'animemusic-e8c09.appspot.com',
   );
-
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'YOUR_IOS_API_KEY',
-    appId: 'YOUR_IOS_APP_ID',
-    messagingSenderId: 'YOUR_MESSAGING_SENDER_ID',
-    projectId: 'YOUR_PROJECT_ID',
-    storageBucket: 'YOUR_PROJECT_ID.appspot.com',
+    apiKey: 'AIzaSyD1wx9smxsOz3xOyncukY8kba9jcC_IIVM',
+    appId: '1:207784872626:ios:cb41b4473447fdc80f17ab',
+    messagingSenderId: '207784872626',
+    projectId: 'animemusic-e8c09',
+    databaseURL: 'https://animemusic-e8c09.firebaseio.com',
+    storageBucket: 'animemusic-e8c09.appspot.com',
+    androidClientId: '207784872626-1ls448nnv4ijnpqvi4pjeejbnhqp23dn.apps.googleusercontent.com',
     iosBundleId: 'com.example.groceryListApp',
   );
-
   static const FirebaseOptions macos = FirebaseOptions(
     apiKey: 'YOUR_IOS_API_KEY',
     appId: 'YOUR_IOS_APP_ID',

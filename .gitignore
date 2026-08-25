@@ -1,0 +1,61 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.buildlog/
+.history
+.svn/
+.project
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Flutter-specific
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+/build/
+
+# Android-specific
+/android/app/src/main/res/generated/
+/android/app/src/main/res/values/generated_security_config.xml
+/android/local.properties
+/android/key.properties
+*.keystore
+*.jks
+
+# iOS-specific
+/ios/Flutter/Generated.xcconfig
+/ios/Flutter/flutter_export_environment.sh
+/ios/Flutter/Flutter.podspec
+/ios/Pods/
+/ios/.symlinks/
+/ios/Flash/
+/ios/Config/
+/ios/Runner/GeneratedPluginRegistrant.h
+/ios/Runner/GeneratedPluginRegistrant.m
+
+# Web-specific
+.pub-cache/
+/web/manifest.json
+
+# macOS-specific
+/macos/Flutter/GeneratedPluginRegistrant.swift
+/macos/Flutter/ephemeral/
+
+# Linux-specific
+/linux/flutter/ephemeral/
+
+# Windows-specific
+/windows/flutter/ephemeral/
+
+firebase.exe
+
+flutterfire.bat

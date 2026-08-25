@@ -13,6 +13,7 @@ class GroceryItemTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final controller = ref.read(groceryListControllerProvider.notifier);
+    final match = ref.watch(itemMatchProvider(item.name));
 
     return Dismissible(
       key: ValueKey(item.id),
@@ -51,16 +52,53 @@ class GroceryItemTile extends ConsumerWidget {
           value: item.isChecked,
           onChanged: (_) => controller.toggleItem(item),
         ),
-        title: Text(
-          item.name,
-          style: TextStyle(
-            decoration: item.isChecked ? TextDecoration.lineThrough : null,
-            color: item.isChecked
-                ? Theme.of(context).colorScheme.outline
-                : null,
-          ),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(
+                item.name,
+                style: TextStyle(
+                  decoration: item.isChecked ? TextDecoration.lineThrough : null,
+                  color: item.isChecked ? Theme.of(context).colorScheme.outline : null,
+                ),
+              ),
+            ),
+            if (match != null)
+              Tooltip(
+                message: 'Deal found at ${match.links.firstWhere((l) => l.isLowestPrice).storeName}! Lowest: EGP ${match.links.firstWhere((l) => l.isLowestPrice).price}',
+                child: GestureDetector(
+                  onTap: () => Navigator.pushNamed(context, '/purchase-later'),
+                  child: Icon(
+                    Icons.local_offer,
+                    size: 16,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+              ),
+          ],
         ),
-        subtitle: Text('Qty: ${item.quantity}'),
+        subtitle: Row(
+          children: [
+            Text('Qty: ${item.quantity} ${item.unit}'),
+            if (item.price > 0) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.secondaryContainer,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  'EGP ${item.price.toStringAsFixed(2)}',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSecondaryContainer,
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+              ),
+            ],
+          ],
+        ),
         trailing: IconButton(
           icon: const Icon(Icons.edit_outlined),
           onPressed: () => showAddItemDialog(
