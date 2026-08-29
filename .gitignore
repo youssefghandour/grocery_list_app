@@ -26,6 +26,7 @@
 # Android-specific
 /android/app/src/main/res/generated/
 /android/app/src/main/res/values/generated_security_config.xml
+/android/build
 /android/local.properties
 /android/key.properties
 *.keystore
@@ -43,7 +44,6 @@
 /ios/Runner/GeneratedPluginRegistrant.m
 
 # Web-specific
-.pub-cache/
 /web/manifest.json
 
 # macOS-specific

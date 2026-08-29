@@ -13,48 +13,13 @@
           "package_name": "com.example.grocery_list_app"
         }
       },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyDzJxNfq-dqcuSPseWsTNA86Wv3MLbRtEs"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:207784872626:android:82561adf81c9a5cc0f17ab",
-        "android_client_info": {
-          "package_name": "com.ghandour.animemusic"
-        }
-      },
       "oauth_client": [
         {
-          "client_id": "207784872626-1ls448nnv4ijnpqvi4pjeejbnhqp23dn.apps.googleusercontent.com",
+          "client_id": "207784872626-sf8ipns41vgehgl25j6p5hikmg0mfqk7.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.ghandour.animemusic",
-            "certificate_hash": "8ef88becde348e3ca39d3bf034b41b5d02ef0652"
-          }
-        },
-        {
-          "client_id": "207784872626-jsp37i3vuhntgrhb3kth7i7lq80b0a4s.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.ghandour.animemusic",
-            "certificate_hash": "2aa5aebd4d6ad0ec5e4fb7b609e1b874eb805ebe"
-          }
-        },
-        {
-          "client_id": "207784872626-pkt9foj9mig8ljblb8aahjjme4lsjafe.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.ghandour.animemusic",
-            "certificate_hash": "4156956cbd4f59bd10399a9ccda5a7eff0c0be0a"
+            "package_name": "com.example.grocery_list_app",
+            "certificate_hash": "11082ba29a363a84995f9af85468dff3456a8fde"
           }
         }
       ],
@@ -65,83 +30,15 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:207784872626:android:5fa95ccf95e531f70f17ab",
-        "android_client_info": {
-          "package_name": "com.ghandour.dafter"
-        }
-      },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyDzJxNfq-dqcuSPseWsTNA86Wv3MLbRtEs"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:207784872626:android:c05c883bbaa1aab20f17ab",
-        "android_client_info": {
-          "package_name": "com.ghandour.mechatronicsstore"
-        }
-      },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyDzJxNfq-dqcuSPseWsTNA86Wv3MLbRtEs"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:207784872626:android:3ee20fdc619236750f17ab",
-        "android_client_info": {
-          "package_name": "com.ghandour.spy"
-        }
-      },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyDzJxNfq-dqcuSPseWsTNA86Wv3MLbRtEs"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:207784872626:android:75295e6a6a5807330f17ab",
-        "android_client_info": {
-          "package_name": "com.udacity.locationreminder"
-        }
-      },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyDzJxNfq-dqcuSPseWsTNA86Wv3MLbRtEs"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "207784872626-27fdrl4uah47eta0mens3sf5adbf406u.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.groceryListApp"
+              }
+            }
+          ]
         }
       }
     }
