@@ -13,7 +13,7 @@ class GroceryItemTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final controller = ref.read(groceryListControllerProvider.notifier);
-    final match = ref.watch(itemMatchProvider(item.name));
+    // final match = ref.watch(itemMatchProvider(item.name));
 
     return Dismissible(
       key: ValueKey(item.id),
@@ -63,6 +63,7 @@ class GroceryItemTile extends ConsumerWidget {
                 ),
               ),
             ),
+            /*
             if (match != null)
               Tooltip(
                 message: 'Deal found at ${match.links.firstWhere((l) => l.isLowestPrice).storeName}! Lowest: EGP ${match.links.firstWhere((l) => l.isLowestPrice).price}',
@@ -75,6 +76,7 @@ class GroceryItemTile extends ConsumerWidget {
                   ),
                 ),
               ),
+            */
           ],
         ),
         subtitle: Row(

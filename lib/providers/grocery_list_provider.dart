@@ -61,6 +61,7 @@ final smartSuggestionsProvider = StreamProvider<List<String>>((ref) {
       .watchSmartSuggestions(appUser.householdId!);
 });
 
+/*
 /// Watches cached products for the household's shopping history.
 final purchaseLaterProvider = StreamProvider<List<ProductMatch>>((ref) {
   final firestore = FirebaseFirestore.instance;
@@ -79,6 +80,7 @@ final itemMatchProvider = Provider.family<ProductMatch?, String>((ref, itemName)
     return null;
   }
 });
+*/
 
 class GroceryListController extends StateNotifier<AsyncValue<void>> {
   GroceryListController(this._ref) : super(const AsyncData(null));
@@ -129,8 +131,6 @@ class GroceryListController extends StateNotifier<AsyncValue<void>> {
               name: 'Main List',
               userId: userId,
             );
-        // The StreamProvider will update and pick up the new list.
-        // We need to wait a moment or find the ID.
         final lists = await _ref.read(groceryListsProvider.future);
         if (lists.isNotEmpty) {
           listId = lists.first.id;
@@ -139,19 +139,51 @@ class GroceryListController extends StateNotifier<AsyncValue<void>> {
       }
 
       if (listId != null) {
-        await _ref.read(firestoreServiceProvider).addGroceryItem(
-              householdId: householdId,
-              listId: listId,
-              name: name,
-              quantity: quantity,
-              addedBy: userId,
-              category: category,
-              unit: unit,
-              price: price,
-            );
+        // Check if item already exists in the CURRENT list
+        final currentItems = _ref.read(groceryListProvider).valueOrNull ?? [];
+        final existingItem = currentItems.firstWhere(
+          (item) => item.name.trim().toLowerCase() == name.trim().toLowerCase(),
+          orElse: () => GroceryItem(
+            id: '',
+            name: '',
+            quantity: '',
+            isChecked: false,
+            addedBy: '',
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          ),
+        );
+
+        if (existingItem.id.isNotEmpty) {
+          // Increment quantity if it's a number, otherwise just update price/category if changed
+          int currentQty = int.tryParse(existingItem.quantity) ?? 1;
+          int addQty = int.tryParse(quantity) ?? 1;
+          
+          await _ref.read(firestoreServiceProvider).updateGroceryItem(
+                householdId: householdId,
+                listId: listId,
+                item: existingItem.copyWith(
+                  quantity: (currentQty + addQty).toString(),
+                  price: price > 0 ? price : existingItem.price,
+                  category: category != 'Other' ? category : existingItem.category,
+                  updatedAt: DateTime.now(),
+                ),
+              );
+        } else {
+          await _ref.read(firestoreServiceProvider).addGroceryItem(
+                householdId: householdId,
+                listId: listId,
+                name: name,
+                quantity: quantity,
+                addedBy: userId,
+                category: category,
+                unit: unit,
+                price: price,
+              );
+        }
         
         // Trigger secret background search
-        _ref.read(backgroundSearchServiceProvider).searchAndCache(name);
+        // _ref.read(backgroundSearchServiceProvider).searchAndCache(name);
       }
     });
   }

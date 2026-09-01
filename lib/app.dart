@@ -7,7 +7,7 @@ import 'screens/auth/register_screen.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/household/create_household_screen.dart';
 import 'screens/household/join_household_screen.dart';
-import 'screens/home/purchase_later_screen.dart';
+// import 'screens/home/purchase_later_screen.dart';
 
 class GroceryListApp extends ConsumerWidget {
   const GroceryListApp({super.key});
@@ -43,7 +43,7 @@ class GroceryListApp extends ConsumerWidget {
         '/login': (_) => const LoginScreen(),
         '/register': (_) => const RegisterScreen(),
         '/home': (_) => const HomeScreen(),
-        '/purchase-later': (_) => const PurchaseLaterScreen(),
+        // '/purchase-later': (_) => const PurchaseLaterScreen(),
         '/create-household': (_) => const CreateHouseholdScreen(),
         '/join-household': (_) => const JoinHouseholdScreen(),
       },

@@ -244,6 +244,7 @@ class HomeScreen extends ConsumerWidget {
                       _showCreateListDialog(context, ref);
                     },
                   ),
+                  /*
                   const Divider(),
                   ListTile(
                     leading: const Icon(Icons.local_offer_outlined),
@@ -253,6 +254,7 @@ class HomeScreen extends ConsumerWidget {
                       Navigator.pushNamed(context, '/purchase-later');
                     },
                   ),
+                  */
                 ],
               ),
               loading: () => const Center(child: CircularProgressIndicator()),

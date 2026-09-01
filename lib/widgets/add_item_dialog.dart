@@ -31,6 +31,7 @@ class _AddItemDialogState extends ConsumerState<AddItemDialog> {
   late final TextEditingController _priceController;
   late String _selectedCategory;
   late String _selectedUnit;
+  late int _quantity;
   bool _isSubmitting = false;
 
   bool get _isEditing => widget.existingItem != null;
@@ -39,8 +40,9 @@ class _AddItemDialogState extends ConsumerState<AddItemDialog> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.existingItem?.name);
+    _quantity = int.tryParse(widget.existingItem?.quantity ?? '1') ?? 1;
     _quantityController =
-        TextEditingController(text: widget.existingItem?.quantity ?? '1');
+        TextEditingController(text: _quantity.toString());
     _priceController = TextEditingController(
       text: widget.existingItem?.price != null && widget.existingItem!.price > 0
           ? widget.existingItem!.price.toStringAsFixed(2)
@@ -48,6 +50,22 @@ class _AddItemDialogState extends ConsumerState<AddItemDialog> {
     );
     _selectedCategory = widget.existingItem?.category ?? AppConstants.categories.last; // Default to 'Other'
     _selectedUnit = widget.existingItem?.unit ?? 'pcs';
+  }
+
+  void _increment() {
+    setState(() {
+      _quantity++;
+      _quantityController.text = _quantity.toString();
+    });
+  }
+
+  void _decrement() {
+    if (_quantity > 1) {
+      setState(() {
+        _quantity--;
+        _quantityController.text = _quantity.toString();
+      });
+    }
   }
 
   @override
@@ -64,11 +82,12 @@ class _AddItemDialogState extends ConsumerState<AddItemDialog> {
     setState(() => _isSubmitting = true);
     final controller = ref.read(groceryListControllerProvider.notifier);
     final price = double.tryParse(_priceController.text) ?? 0.0;
+    final name = _nameController.text.trim();
 
     if (_isEditing) {
       await controller.updateItem(
         widget.existingItem!.copyWith(
-          name: _nameController.text.trim(),
+          name: name,
           quantity: _quantityController.text.trim(),
           category: _selectedCategory,
           unit: _selectedUnit,
@@ -78,7 +97,7 @@ class _AddItemDialogState extends ConsumerState<AddItemDialog> {
       );
     } else {
       await controller.addItem(
-        name: _nameController.text.trim(),
+        name: name,
         quantity: _quantityController.text.trim(),
         category: _selectedCategory,
         unit: _selectedUnit,
@@ -102,6 +121,7 @@ class _AddItemDialogState extends ConsumerState<AddItemDialog> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Autocomplete<String>(
+                initialValue: TextEditingValue(text: _nameController.text),
                 optionsBuilder: (TextEditingValue textEditingValue) {
                   if (textEditingValue.text.isEmpty) {
                     return const Iterable<String>.empty();
@@ -116,11 +136,6 @@ class _AddItemDialogState extends ConsumerState<AddItemDialog> {
                   _nameController.text = selection;
                 },
                 fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
-                  // Sync local controller with autocomplete controller if needed
-                  // For simplicity, we'll just use the autocomplete's controller for name
-                  _nameController.text = controller.text.isEmpty ? _nameController.text : controller.text;
-                  controller.text = _nameController.text;
-
                   return TextFormField(
                     controller: controller,
                     focusNode: focusNode,
@@ -130,6 +145,7 @@ class _AddItemDialogState extends ConsumerState<AddItemDialog> {
                     ),
                     textCapitalization: TextCapitalization.sentences,
                     autofocus: !_isEditing,
+                    onChanged: (val) => _nameController.text = val,
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
                         return 'Enter an item name';
@@ -141,25 +157,74 @@ class _AddItemDialogState extends ConsumerState<AddItemDialog> {
               ),
               const SizedBox(height: 12),
               Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Expanded(
-                    flex: 2,
-                    child: TextFormField(
-                      controller: _quantityController,
-                      decoration: const InputDecoration(
-                        labelText: 'Qty',
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Quantity', style: TextStyle(fontSize: 12)),
+                      const SizedBox(height: 4),
+                      Container(
+                        width: 110,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5)),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            IconButton(
+                              onPressed: _decrement,
+                              icon: const Icon(Icons.remove, size: 16),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                            ),
+                            Expanded(
+                              child: TextFormField(
+                                controller: _quantityController,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontSize: 16, 
+                                  fontWeight: FontWeight.bold,
+                                  height: 1, // Fixes vertical alignment
+                                ),
+                                decoration: const InputDecoration(
+                                  isDense: true,
+                                  contentPadding: EdgeInsets.zero,
+                                  border: InputBorder.none,
+                                  counterText: '', // Hide any counter
+                                ),
+                                keyboardType: TextInputType.number,
+                                maxLength: 3, // Prevent huge numbers breaking UI
+                                onChanged: (val) {
+                                  final n = int.tryParse(val);
+                                  if (n != null) {
+                                    _quantity = n;
+                                  }
+                                },
+                              ),
+                            ),
+                            IconButton(
+                              onPressed: _increment,
+                              icon: const Icon(Icons.add, size: 16),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                            ),
+                          ],
+                        ),
                       ),
-                      keyboardType: TextInputType.text,
-                    ),
+                    ],
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 12),
                   Expanded(
-                    flex: 3,
                     child: DropdownButtonFormField<String>(
                       initialValue: _selectedUnit,
-                      decoration: const InputDecoration(labelText: 'Unit'),
+                      decoration: const InputDecoration(
+                        labelText: 'Unit',
+                        contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      ),
                       items: AppConstants.units
-                          .map((u) => DropdownMenuItem(value: u, child: Text(u)))
+                          .map((u) => DropdownMenuItem(value: u, child: Text(u, style: const TextStyle(fontSize: 14))))
                           .toList(),
                       onChanged: (val) => setState(() => _selectedUnit = val!),
                     ),
