@@ -68,6 +68,14 @@
     ],
     "rewrites": [
       {
+        "source": "/help",
+        "destination": "/help.html"
+      },
+      {
+        "source": "/privacy",
+        "destination": "/privacy.html"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }

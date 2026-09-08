@@ -317,8 +317,8 @@ class ProfileTabView extends ConsumerWidget {
                       title: 'Share Na2slna with Friends',
                       onTap: () {
                         Share.share(
-                          'Check out Na2slna! The easiest way to share grocery lists with your family. Download it here: https://na2slna.web.app',
-                          subject: 'Share Na2slna',
+                          'Na2slna - Shared Grocery Lists for the Family! 🛒\n\nInstantly sync items, track prices, and stay organized. Join the beta now!\n\nDownload: https://na2slna.web.app',
+                          subject: 'Na2slna: Shared Grocery List',
                         );
                       },
                     ),
