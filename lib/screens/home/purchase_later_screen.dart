@@ -13,19 +13,34 @@
 //
 //     return Scaffold(
 //       appBar: AppBar(
-//         title: const Text('Purchase Later & Deals'),
+//         title: const Text('Deals & Offers'),
+//         centerTitle: true,
 //       ),
 //       body: matchesAsync.when(
 //         data: (matches) {
 //           if (matches.isEmpty) {
-//             return const Center(
-//               child: Text('No product matches found yet.\nAdd items to your list to see deals!'),
+//             return Center(
+//               child: Column(
+//                 mainAxisAlignment: MainAxisAlignment.center,
+//                 children: [
+//                   Icon(
+//                     Icons.local_offer_outlined,
+//                     size: 64,
+//                     color: Theme.of(context).colorScheme.outline.withOpacity(0.5),
+//                   ),
+//                   const SizedBox(height: 16),
+//                   const Text(
+//                     'No deals found yet.\nAdd items to your list to see offers!',
+//                     textAlign: TextAlign.center,
+//                   ),
+//                 ],
+//               ),
 //             );
 //           }
 //
 //           return ListView.builder(
 //             itemCount: matches.length,
-//             padding: const EdgeInsets.all(16),
+//             padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
 //             itemBuilder: (context, index) {
 //               final match = matches[index];
 //               return _ProductMatchCard(match: match);
@@ -46,6 +61,8 @@
 //
 //   @override
 //   Widget build(BuildContext context) {
+//     final theme = Theme.of(context);
+//
 //     return Card(
 //       margin: const EdgeInsets.only(bottom: 16),
 //       clipBehavior: Clip.antiAlias,
@@ -57,78 +74,86 @@
 //             children: [
 //               if (match.imageUrl.isNotEmpty)
 //                 Padding(
-//                   padding: const EdgeInsets.all(8.0),
+//                   padding: const EdgeInsets.all(12.0),
 //                   child: ClipRRect(
-//                     borderRadius: BorderRadius.circular(8),
+//                     borderRadius: BorderRadius.circular(12),
 //                     child: Image.network(
 //                       match.imageUrl,
-//                       width: 100,
-//                       height: 100,
+//                       width: 80,
+//                       height: 80,
 //                       fit: BoxFit.cover,
 //                     ),
 //                   ),
 //                 ),
 //               Expanded(
 //                 child: Padding(
-//                   padding: const EdgeInsets.all(12.0),
+//                   padding: const EdgeInsets.fromLTRB(0, 16, 16, 16),
 //                   child: Column(
 //                     crossAxisAlignment: CrossAxisAlignment.start,
 //                     children: [
 //                       Text(
 //                         match.displayName,
-//                         style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+//                         style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+//                         maxLines: 2,
+//                         overflow: TextOverflow.ellipsis,
 //                       ),
 //                       if (match.brand.isNotEmpty)
 //                         Text(
 //                           match.brand,
-//                           style: Theme.of(context).textTheme.bodySmall,
+//                           style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
 //                         ),
-//                       const SizedBox(height: 8),
-//                       Text(
-//                         'Last searched: ${match.lastUpdated.day}/${match.lastUpdated.month}',
-//                         style: Theme.of(context).textTheme.labelSmall,
-//                       ),
 //                     ],
 //                   ),
 //                 ),
 //               ),
 //             ],
 //           ),
-//           const Divider(height: 1),
+//           const Divider(height: 1, indent: 16, endIndent: 16),
 //           ...match.links.where((l) => l.isLowestPrice || l.isSale).map((link) => Column(
 //                 children: [
 //                   ListTile(
 //                     dense: true,
+//                     contentPadding: const EdgeInsets.symmetric(horizontal: 16),
 //                     leading: link.brochureUrl != null
 //                         ? ClipRRect(
 //                             borderRadius: BorderRadius.circular(4),
-//                             child: Image.network(link.brochureUrl!, width: 40, height: 40, fit: BoxFit.cover),
+//                             child: Image.network(link.brochureUrl!, width: 32, height: 32, fit: BoxFit.cover),
 //                           )
-//                         : const Icon(Icons.store_outlined),
-//                     title: Text(link.storeName),
+//                         : Icon(Icons.store_outlined, color: theme.colorScheme.primary),
+//                     title: Text(link.storeName, style: const TextStyle(fontWeight: FontWeight.w600)),
 //                     subtitle: link.isSale
-//                         ? const Text('🔥 FLASH SALE',
-//                             style: TextStyle(color: Colors.orange, fontSize: 10, fontWeight: FontWeight.bold))
-//                         : (link.dateFound != null ? Text('Found: ${link.dateFound!.split('T')[0]}', style: const TextStyle(fontSize: 10)) : null),
+//                         ? Text('🔥 FLASH SALE',
+//                             style: TextStyle(color: theme.colorScheme.error, fontSize: 10, fontWeight: FontWeight.bold))
+//                         : null,
 //                     trailing: Row(
 //                       mainAxisSize: MainAxisSize.min,
 //                       children: [
 //                         if (link.isLowestPrice)
-//                           const Chip(
-//                             label: Text('Lowest', style: TextStyle(fontSize: 10)),
-//                             padding: EdgeInsets.zero,
-//                             visualDensity: VisualDensity.compact,
-//                             backgroundColor: Colors.green,
-//                             labelStyle: TextStyle(color: Colors.white),
+//                           Container(
+//                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+//                             decoration: BoxDecoration(
+//                               color: theme.colorScheme.secondary,
+//                               borderRadius: BorderRadius.circular(4),
+//                             ),
+//                             child: Text(
+//                               'BEST',
+//                               style: TextStyle(
+//                                 color: theme.colorScheme.onSecondary,
+//                                 fontSize: 9,
+//                                 fontWeight: FontWeight.bold,
+//                               ),
+//                             ),
 //                           ),
 //                         const SizedBox(width: 8),
 //                         Text(
-//                           'EGP ${link.price.toStringAsFixed(2)}',
-//                           style: const TextStyle(fontWeight: FontWeight.bold),
+//                           '${link.price.toStringAsFixed(2)} EGP',
+//                           style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold),
 //                         ),
+//                         const SizedBox(width: 4),
 //                         IconButton(
 //                           icon: const Icon(Icons.open_in_new, size: 18),
-//                           onPressed: () => launchUrl(Uri.parse(link.url)),
+//                           onPressed: () => launchUrl(Uri.parse(link.url), mode: LaunchMode.externalApplication),
+//                           visualDensity: VisualDensity.compact,
 //                         ),
 //                       ],
 //                     ),

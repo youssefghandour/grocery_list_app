@@ -55,7 +55,7 @@ class _CreateHouseholdScreenState extends ConsumerState<CreateHouseholdScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  'Start a new shared grocery list for your family.',
+                  'Start a new shared shopping list for your family.',
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
                 const SizedBox(height: 24),
@@ -216,14 +216,14 @@ class HouseholdSetupScreen extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               Text(
-                'Join or create a household',
+                'Join or create your shopping group',
                 style: Theme.of(context).textTheme.headlineSmall,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 12),
               Text(
-                'Grocery lists are shared within a household. '
-                'All members see updates in real time.',
+                'Na2slna works best when shared. '
+                'All group members see updates in real time.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Theme.of(context).colorScheme.outline,
                     ),

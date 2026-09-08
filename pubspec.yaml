@@ -1,5 +1,5 @@
-name: grocery_list_app
-description: Cross-platform shared grocery list app with Firebase.
+name: na2slna
+description: Na2slna - collaborative grocery lists for Egypt.
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -22,11 +22,22 @@ dependencies:
   url_launcher: ^6.3.0
   firebase_messaging: ^15.1.3
   flutter_local_notifications: ^17.2.2
+  google_fonts: ^8.2.1
+  share_plus: ^10.1.0
+  qr_flutter: ^4.1.0
+  mobile_scanner: ^6.0.4
+  speech_to_text: ^7.0.0
+  app_links: ^6.3.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
 
+
 flutter:
   uses-material-design: true
+
+
+  assets:
+    - assets/

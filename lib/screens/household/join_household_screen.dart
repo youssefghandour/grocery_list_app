@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/household_provider.dart';
+import '../../widgets/barcode_scanner_dialog.dart';
 
 class JoinHouseholdScreen extends ConsumerStatefulWidget {
   const JoinHouseholdScreen({super.key});
@@ -20,6 +21,41 @@ class _JoinHouseholdScreenState extends ConsumerState<JoinHouseholdScreen> {
   void dispose() {
     _codeController.dispose();
     super.dispose();
+  }
+
+  Future<void> _scanQr() async {
+    final String? result = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(builder: (context) => const BarcodeScannerDialog()),
+    );
+
+    if (result == null) return;
+
+    String? extractedCode;
+
+    // Check if scanned value is directly the 6-char code
+    if (result.trim().length == 6) {
+      extractedCode = result.trim();
+    } else {
+      // Try to parse as a URL and extract the 'code' parameter
+      try {
+        final uri = Uri.parse(result);
+        extractedCode = uri.queryParameters['code'];
+      } catch (e) {
+        debugPrint('QR_SCAN: Failed to parse scanned result: $e');
+      }
+    }
+
+    if (extractedCode != null && extractedCode.length == 6) {
+      _codeController.text = extractedCode.toUpperCase();
+      _join();
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Invalid QR code. Please scan a valid household invite.')),
+        );
+      }
+    }
   }
 
   Future<void> _join() async {
@@ -49,7 +85,7 @@ class _JoinHouseholdScreenState extends ConsumerState<JoinHouseholdScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Join Household')),
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: Form(
             key: _formKey,
@@ -81,15 +117,36 @@ class _JoinHouseholdScreenState extends ConsumerState<JoinHouseholdScreen> {
                   },
                 ),
                 const SizedBox(height: 24),
-                FilledButton(
+                FilledButton.icon(
                   onPressed: isLoading ? null : _join,
-                  child: isLoading
+                  icon: const Icon(Icons.group_add_outlined),
+                  label: isLoading
                       ? const SizedBox(
                           height: 20,
                           width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                         )
                       : const Text('Join Household'),
+                ),
+                const SizedBox(height: 16),
+                const Row(
+                  children: [
+                    Expanded(child: Divider()),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      child: Text('OR', style: TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold)),
+                    ),
+                    Expanded(child: Divider()),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                OutlinedButton.icon(
+                  onPressed: isLoading ? null : _scanQr,
+                  icon: const Icon(Icons.qr_code_scanner),
+                  label: const Text('Scan Invite QR'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
                 ),
               ],
             ),

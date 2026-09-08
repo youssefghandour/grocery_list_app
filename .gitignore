@@ -22,6 +22,8 @@
 .pub-cache/
 .pub/
 /build/
+.agents/
+.claude
 
 # Android-specific
 /android/app/src/main/res/generated/

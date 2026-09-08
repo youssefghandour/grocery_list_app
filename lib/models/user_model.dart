@@ -8,7 +8,10 @@ class AppUser {
     required this.email,
     required this.displayName,
     required this.role,
+    this.imageUrl,
     this.householdId,
+    this.fcmToken,
+    this.notificationsEnabled = true,
     required this.createdAt,
     this.updatedAt,
   });
@@ -17,7 +20,10 @@ class AppUser {
   final String email;
   final String displayName;
   final UserRole role;
+  final String? imageUrl;
   final String? householdId;
+  final String? fcmToken;
+  final bool notificationsEnabled;
   final DateTime createdAt;
   final DateTime? updatedAt;
 
@@ -30,7 +36,10 @@ class AppUser {
       email: data['email'] as String? ?? '',
       displayName: data['displayName'] as String? ?? '',
       role: UserRole.fromString(data['role'] as String? ?? 'familyMember'),
+      imageUrl: data['imageUrl'] as String?,
       householdId: data['householdId'] as String?,
+      fcmToken: data['fcmToken'] as String?,
+      notificationsEnabled: data['notificationsEnabled'] as bool? ?? true,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
     );
@@ -41,7 +50,10 @@ class AppUser {
       'email': email,
       'displayName': displayName,
       'role': role.firestoreValue,
+      if (imageUrl != null) 'imageUrl': imageUrl,
       if (householdId != null) 'householdId': householdId,
+      if (fcmToken != null) 'fcmToken': fcmToken,
+      'notificationsEnabled': notificationsEnabled,
       'createdAt': Timestamp.fromDate(createdAt),
       if (updatedAt != null) 'updatedAt': Timestamp.fromDate(updatedAt!),
     };
@@ -50,7 +62,10 @@ class AppUser {
   AppUser copyWith({
     String? displayName,
     UserRole? role,
+    String? imageUrl,
     String? householdId,
+    String? fcmToken,
+    bool? notificationsEnabled,
     DateTime? updatedAt,
   }) {
     return AppUser(
@@ -58,7 +73,10 @@ class AppUser {
       email: email,
       displayName: displayName ?? this.displayName,
       role: role ?? this.role,
+      imageUrl: imageUrl ?? this.imageUrl,
       householdId: householdId ?? this.householdId,
+      fcmToken: fcmToken ?? this.fcmToken,
+      notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

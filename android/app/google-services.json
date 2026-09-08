@@ -41,6 +41,33 @@
           ]
         }
       }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:207784872626:android:30a56c8ab5d159420f17ab",
+        "android_client_info": {
+          "package_name": "com.ghandour.na2slna"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDzJxNfq-dqcuSPseWsTNA86Wv3MLbRtEs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "207784872626-27fdrl4uah47eta0mens3sf5adbf406u.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.groceryListApp"
+              }
+            }
+          ]
+        }
+      }
     }
   ],
   "configuration_version": "1"

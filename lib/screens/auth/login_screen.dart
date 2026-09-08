@@ -79,18 +79,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               child: Form(
                 key: _formKey,
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  // crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Icon(
-                      Icons.shopping_cart_outlined,
-                      size: 64,
-                      color: Theme.of(context).colorScheme.primary,
+                    Image.asset(
+                    "assets/na2slna.png"  ,
+                  width: 64,
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'Grocery List',
+                      'Na2slna',
                       textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.headlineMedium,
+                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                     ),
                     const SizedBox(height: 8),
                     Text(
@@ -179,8 +181,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       onPressed: isLoading
                           ? null
                           : () => Navigator.pushNamed(context, '/register'),
-                      icon: const Icon(Icons.add_task),
-                      label: const Text('Add to the lists'),
+                      icon: const Icon(Icons.shopping_basket_outlined),
+                      label: const Text('Start Shopping'),
                     ),
                   ],
                 ),

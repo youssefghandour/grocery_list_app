@@ -12,6 +12,9 @@ class GroceryItem {
     this.category = 'Other',
     this.unit = 'pcs',
     this.price = 0.0,
+    this.isDeal = false,
+    this.originalPrice,
+    this.store,
   });
 
   final String id;
@@ -24,13 +27,16 @@ class GroceryItem {
   final String category;
   final String unit;
   final double price;
+  final bool isDeal;
+  final double? originalPrice;
+  final String? store;
 
   factory GroceryItem.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data()!;
     return GroceryItem(
       id: doc.id,
       name: data['name'] as String? ?? '',
-      quantity: data['quantity'] as String? ?? '1',
+      quantity: data['quantity'] as String? ?? '1.0',
       isChecked: data['isChecked'] as bool? ?? false,
       addedBy: data['addedBy'] as String? ?? '',
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
@@ -38,6 +44,9 @@ class GroceryItem {
       category: data['category'] as String? ?? 'Other',
       unit: data['unit'] as String? ?? 'pcs',
       price: (data['price'] as num?)?.toDouble() ?? 0.0,
+      isDeal: data['isDeal'] as bool? ?? false,
+      originalPrice: (data['originalPrice'] as num?)?.toDouble(),
+      store: data['store'] as String?,
     );
   }
 
@@ -52,6 +61,9 @@ class GroceryItem {
       'category': category,
       'unit': unit,
       'price': price,
+      'isDeal': isDeal,
+      if (originalPrice != null) 'originalPrice': originalPrice,
+      if (store != null) 'store': store,
     };
   }
 
@@ -63,6 +75,9 @@ class GroceryItem {
     String? category,
     String? unit,
     double? price,
+    bool? isDeal,
+    double? originalPrice,
+    String? store,
   }) {
     return GroceryItem(
       id: id,
@@ -75,6 +90,9 @@ class GroceryItem {
       category: category ?? this.category,
       unit: unit ?? this.unit,
       price: price ?? this.price,
+      isDeal: isDeal ?? this.isDeal,
+      originalPrice: originalPrice ?? this.originalPrice,
+      store: store ?? this.store,
     );
   }
 }

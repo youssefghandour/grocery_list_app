@@ -46,6 +46,7 @@ class FirestoreService {
     required String uid,
     required String email,
     required String displayName,
+    String? imageUrl,
   }) async {
     final now = DateTime.now();
     final user = AppUser(
@@ -53,6 +54,7 @@ class FirestoreService {
       email: email,
       displayName: displayName,
       role: UserRole.familyMember,
+      imageUrl: imageUrl,
       createdAt: now,
     );
     await _users.doc(uid).set(user.toFirestore());
@@ -61,6 +63,20 @@ class FirestoreService {
   Future<void> updateDisplayName(String uid, String displayName) async {
     await _users.doc(uid).update({
       'displayName': displayName,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> updateFcmToken(String uid, String? token) async {
+    await _users.doc(uid).update({
+      'fcmToken': token,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> updateNotificationPreference(String uid, bool enabled) async {
+    await _users.doc(uid).update({
+      'notificationsEnabled': enabled,
       'updatedAt': FieldValue.serverTimestamp(),
     });
   }
@@ -80,6 +96,12 @@ class FirestoreService {
     return _households.doc(householdId).snapshots().map((doc) {
       if (!doc.exists) return null;
       return Household.fromFirestore(doc);
+    });
+  }
+
+  Future<void> updateHouseholdName(String householdId, String newName) async {
+    await _households.doc(householdId).update({
+      'name': newName.trim(),
     });
   }
 
@@ -250,12 +272,13 @@ class FirestoreService {
     await _itemsCollection(householdId, listId).add({
       'householdId': householdId, // Added for collectionGroup suggestions
       'name': name.trim(),
-      'quantity': quantity.trim().isEmpty ? '1' : quantity.trim(),
+      'quantity': quantity.trim().isEmpty ? '1.0' : quantity.trim(),
       'isChecked': false,
       'addedBy': addedBy,
       'category': category,
       'unit': unit,
       'price': price,
+      'isDeal': false,
       'createdAt': Timestamp.fromDate(now),
       'updatedAt': Timestamp.fromDate(now),
     });
@@ -273,6 +296,9 @@ class FirestoreService {
       'category': item.category,
       'unit': item.unit,
       'price': item.price,
+      'isDeal': item.isDeal,
+      'originalPrice': item.originalPrice,
+      'store': item.store,
       'updatedAt': FieldValue.serverTimestamp(),
     });
   }

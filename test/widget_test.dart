@@ -7,13 +7,13 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:grocery_list_app/app.dart';
+import 'package:na2slna/app.dart';
 
 
 void main() {
   testWidgets('Counter increments smoke test', (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const GroceryListApp());
+    await tester.pumpWidget(const Na2slnaApp());
 
     // Verify that our counter starts at 0.
     expect(find.text('0'), findsOneWidget);

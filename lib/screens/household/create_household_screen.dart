@@ -56,7 +56,7 @@ class _CreateHouseholdScreenState extends ConsumerState<CreateHouseholdScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  'Start a new shared grocery list for your family.',
+                  'Start a new shared shopping list for your family.',
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
                 const SizedBox(height: 24),

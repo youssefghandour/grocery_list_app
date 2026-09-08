@@ -1,11 +1,8 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/grocery_item_model.dart';
 import '../models/grocery_list_model.dart';
-import '../models/product_cache_model.dart';
 import '../providers/auth_provider.dart';
-import '../services/background_search_service.dart';
 
 /// Watch all grocery lists in the household.
 final groceryListsProvider = StreamProvider<List<GroceryList>>((ref) {

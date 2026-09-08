@@ -2,6 +2,8 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
+import 'firestore_service.dart';
+
 class NotificationService {
   NotificationService._();
 
@@ -38,6 +40,19 @@ class NotificationService {
 
     await _localNotifications.initialize(initializationSettings);
 
+    // Create high importance channel for Android
+    const AndroidNotificationChannel channel = AndroidNotificationChannel(
+      'high_importance_channel',
+      'High Importance Notifications',
+      description: 'This channel is used for important notifications.',
+      importance: Importance.max,
+    );
+
+    await _localNotifications
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(channel);
+
     // Setup foreground message handling
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       RemoteNotification? notification = message.notification;
@@ -63,5 +78,20 @@ class NotificationService {
 
   Future<String?> getToken() async {
     return await _messaging.getToken();
+  }
+
+  /// Saves the FCM token to the user's Firestore document.
+  Future<void> syncToken(String uid, FirestoreService firestoreService) async {
+    final token = await getToken();
+    if (token != null) {
+      await firestoreService.updateFcmToken(uid, token);
+      debugPrint('FCM Token synced: $token');
+    }
+
+    // Listen for token refreshes
+    _messaging.onTokenRefresh.listen((newToken) {
+      firestoreService.updateFcmToken(uid, newToken);
+      debugPrint('FCM Token refreshed: $newToken');
+    });
   }
 }

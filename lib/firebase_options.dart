@@ -40,7 +40,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyDzJxNfq-dqcuSPseWsTNA86Wv3MLbRtEs',
-    appId: '1:207784872626:android:095ebfd107b349e60f17ab',
+    appId: '1:207784872626:android:30a56c8ab5d159420f17ab',
     messagingSenderId: '207784872626',
     projectId: 'animemusic-e8c09',
     databaseURL: 'https://animemusic-e8c09.firebaseio.com',
@@ -48,13 +48,14 @@ class DefaultFirebaseOptions {
   );
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyD1wx9smxsOz3xOyncukY8kba9jcC_IIVM',
-    appId: '1:207784872626:ios:cb41b4473447fdc80f17ab',
+    appId: '1:207784872626:ios:da5df5bbe58269970f17ab',
     messagingSenderId: '207784872626',
     projectId: 'animemusic-e8c09',
     databaseURL: 'https://animemusic-e8c09.firebaseio.com',
     storageBucket: 'animemusic-e8c09.appspot.com',
     androidClientId: '207784872626-1ls448nnv4ijnpqvi4pjeejbnhqp23dn.apps.googleusercontent.com',
-    iosBundleId: 'com.example.groceryListApp',
+    iosClientId: '207784872626-pdh0lq5vajeb2lto2834ec98kdup76nb.apps.googleusercontent.com',
+    iosBundleId: 'com.ghandour.na2slna',
   );
   static const FirebaseOptions macos = FirebaseOptions(
     apiKey: 'YOUR_IOS_API_KEY',

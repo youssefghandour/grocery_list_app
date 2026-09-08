@@ -60,6 +60,13 @@ class HouseholdController extends StateNotifier<AsyncValue<void>> {
       await _ref.read(firestoreServiceProvider).leaveHousehold(uid);
     });
   }
+
+  Future<void> removeMember(String targetUid) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      await _ref.read(firestoreServiceProvider).leaveHousehold(targetUid);
+    });
+  }
 }
 
 final householdControllerProvider =

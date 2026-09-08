@@ -88,6 +88,7 @@ class AuthController extends StateNotifier<AsyncValue<void>> {
           uid: user.uid,
           email: user.email ?? '',
           displayName: user.displayName ?? 'User',
+          imageUrl: user.photoURL,
         );
       }
     });
