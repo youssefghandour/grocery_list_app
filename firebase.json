@@ -60,7 +60,7 @@
   },
   "hosting": {
     "site": "na2slna",
-    "public": "public",
+    "public": "build/web",
     "ignore": [
       "firebase.json",
       "**/.*",
