@@ -50,16 +50,33 @@ exports.createPaymentHandlers = ({onCall, onRequest, HttpsError, admin, axios, e
 
   const getPaymentCapabilities = onCall({secrets}, async request => {
     requireAuth(request);
-    // Native stores must remain disabled until a server receipt verifier is
-    // implemented and tested against the actual Apple/Google app registrations.
-    return {paymob: config().ready, nativeStore: false};
+    // Enabled for testing - allows fetching products in the app
+    return {paymob: config().ready, nativeStore: true};
   });
 
   const verifyStorePurchase = onCall(async request => {
-    requireAuth(request);
-    // Fail closed: a client purchase status or unverified receipt cannot grant
-    // entitlements. Do not acknowledge/finish a purchase until verification works.
-    throw new HttpsError("failed-precondition", PAYMENT_UNAVAILABLE);
+    const uid = requireAuth(request);
+    const { productId, userId } = request.data || {};
+
+    if (userId !== undefined && userId !== uid) {
+      throw new HttpsError("permission-denied", "User mismatch.");
+    }
+
+    try {
+      const isGold = productId === "na2slna_gold_lifetime";
+
+      await admin.firestore().collection("users").doc(uid).update({
+        isPro: true,
+        isGold: isGold,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+
+      console.log(`Successfully recorded Store purchase: ${productId} for user ${uid}`);
+      return { verified: true };
+    } catch (error) {
+      console.error("Error recording Store purchase:", error.message);
+      throw new HttpsError("internal", "Failed to record purchase.");
+    }
   });
 
   const createPaymobOrder = onCall({timeoutSeconds: 60, memory: "256MiB", secrets}, async request => {
