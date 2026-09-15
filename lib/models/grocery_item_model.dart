@@ -15,6 +15,7 @@ class GroceryItem {
     this.isDeal = false,
     this.originalPrice,
     this.store,
+    this.imageUrl,
   });
 
   final String id;
@@ -30,6 +31,7 @@ class GroceryItem {
   final bool isDeal;
   final double? originalPrice;
   final String? store;
+  final String? imageUrl;
 
   factory GroceryItem.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data()!;
@@ -47,6 +49,7 @@ class GroceryItem {
       isDeal: data['isDeal'] as bool? ?? false,
       originalPrice: (data['originalPrice'] as num?)?.toDouble(),
       store: data['store'] as String?,
+      imageUrl: data['imageUrl'] as String?,
     );
   }
 
@@ -64,6 +67,7 @@ class GroceryItem {
       'isDeal': isDeal,
       if (originalPrice != null) 'originalPrice': originalPrice,
       if (store != null) 'store': store,
+      if (imageUrl != null) 'imageUrl': imageUrl,
     };
   }
 
@@ -78,6 +82,7 @@ class GroceryItem {
     bool? isDeal,
     double? originalPrice,
     String? store,
+    String? imageUrl,
   }) {
     return GroceryItem(
       id: id,
@@ -93,6 +98,7 @@ class GroceryItem {
       isDeal: isDeal ?? this.isDeal,
       originalPrice: originalPrice ?? this.originalPrice,
       store: store ?? this.store,
+      imageUrl: imageUrl ?? this.imageUrl,
     );
   }
 }

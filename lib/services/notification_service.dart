@@ -15,6 +15,12 @@ class NotificationService {
 
   Future<void> initialize() async {
     // Request permissions (especially for iOS)
+    if (kIsWeb) {
+      // Firebase Messaging has a completely different flow for Web (requires VAPID key)
+      // and flutter_local_notifications doesn't support web initialization this way.
+      return;
+    }
+
     NotificationSettings settings = await _messaging.requestPermission(
       alert: true,
       badge: true,
@@ -38,7 +44,7 @@ class NotificationService {
       iOS: initializationSettingsDarwin,
     );
 
-    await _localNotifications.initialize(initializationSettings);
+    await _localNotifications.initialize(settings: initializationSettings);
 
     // Create high importance channel for Android
     const AndroidNotificationChannel channel = AndroidNotificationChannel(
@@ -60,10 +66,10 @@ class NotificationService {
 
       if (notification != null && android != null) {
         _localNotifications.show(
-          notification.hashCode,
-          notification.title,
-          notification.body,
-          const NotificationDetails(
+          id: notification.hashCode,
+          title: notification.title,
+          body: notification.body,
+          notificationDetails: const NotificationDetails(
             android: AndroidNotificationDetails(
               'high_importance_channel',
               'High Importance Notifications',

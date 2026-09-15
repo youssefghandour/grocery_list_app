@@ -1,13 +1,19 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.ghandour.na2slna">
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="com.android.vending.BILLING" />
 <!--    <uses-permission android:name="android.permission.RECORD_AUDIO" />-->
     <application
         android:label="Na2slna"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:enableOnBackInvokedCallback="true">
+
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-3588319744110149~8101973956"/>
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -25,16 +31,33 @@
               android:name="io.flutter.embedding.android.NormalTheme"
               android:resource="@style/NormalTheme"
               />
+            <!-- app_links handles incoming links; avoid duplicate Flutter routes. -->
+            <meta-data
+                android:name="flutter_deeplinking_enabled"
+                android:value="false" />
+            <meta-data
+                android:name="com.google.android.gms.credentials.API_ENABLED"
+                android:value="false" />
+
+            <meta-data
+                android:name="com.google.android.gms.credentials.CredentialPickerConfig"
+                android:value="false" />
+
+            <meta-data
+                android:name="androidx.credentials.CREDENTIAL_SERVICE_ENABLED"
+                android:value="false" />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
-            <!-- Deep Linking -->
+            <!-- Only household invitations open the app; support pages stay on the web. -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="https" android:host="animemusic-e8c09.web.app" />
+                <data android:scheme="https" android:host="na2slna.web.app" />
+                <data android:path="/join" />
+                <data android:path="/join/" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
@@ -43,6 +66,7 @@
                 <data android:scheme="na2slna" />
             </intent-filter>
         </activity>
+
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="high_importance_channel" />

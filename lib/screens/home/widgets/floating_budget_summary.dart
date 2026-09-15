@@ -10,7 +10,7 @@ class FloatingBudgetSummary extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final items = ref.watch(groceryListProvider).valueOrNull ?? [];
+    final items = ref.watch(groceryListProvider).value ?? [];
 
     final total = items.fold<double>(0, (sum, item) {
       final q = double.tryParse(item.quantity) ?? 1.0;

@@ -8,63 +8,61 @@
   "functions": [
     {
       "codebase": "default",
+      "source": "functions",
+      "runtime": "nodejs22",
       "disallowLegacyRuntimeConfig": true,
+      "predeploy": [
+        "npm --prefix \"$RESOURCE_DIR\" run lint"
+      ],
       "ignore": [
         "node_modules",
         ".git",
         "firebase-debug.log",
         "firebase-debug.*.log",
-        "*.local"
-      ],
-      "predeploy": [],
-      "source": "functions"
+        "*.local",
+        ".env*",
+        "npm-debug.log"
+      ]
     }
   ],
-  "flutter": {
-    "platforms": {
-      "android": {
-        "default": {
-          "projectId": "animemusic-e8c09",
-          "appId": "1:207784872626:android:30a56c8ab5d159420f17ab",
-          "fileOutput": "android/app/google-services.json"
-        }
-      },
-      "dart": {
-        "lib/firebase_options.dart": {
-          "projectId": "animemusic-e8c09",
-          "configurations": {
-            "android": "1:207784872626:android:30a56c8ab5d159420f17ab",
-            "ios": "1:207784872626:ios:da5df5bbe58269970f17ab",
-            "web": "1:207784872626:web:c6141cd89c4dc6ca0f17ab"
-          }
-        }
-      }
-    }
-  },
-  "apphosting": {
-    "backendId": "na2slna",
-    "rootDir": "/",
-    "ignore": [
-      "node_modules",
-      ".git",
-      "firebase-debug.log",
-      "firebase-debug.*.log",
-      "functions"
-    ]
-  },
-  "storage": {
-    "rules": "storage.rules"
-  },
-  "database": {
-    "rules": "database.rules.json"
-  },
   "hosting": {
     "site": "na2slna",
     "public": "build/web",
+    "cleanUrls": true,
+    "trailingSlash": false,
     "ignore": [
       "firebase.json",
-      "**/.*",
+      "**/.!(well-known)",
+      "**/.!(well-known)/**",
       "**/node_modules/**"
+    ],
+    "headers": [
+      {
+        "source": "**/*.@(eot|otf|ttf|ttc|woff|woff2|font.css)",
+        "headers": [
+          {
+            "key": "Access-Control-Allow-Origin",
+            "value": "*"
+          }
+        ]
+      },
+      {
+        "source": "**",
+        "headers": [
+          {
+            "key": "X-Content-Type-Options",
+            "value": "nosniff"
+          },
+          {
+            "key": "X-Frame-Options",
+            "value": "DENY"
+          },
+          {
+            "key": "Strict-Transport-Security",
+            "value": "max-age=31536000; includeSubDomains"
+          }
+        ]
+      }
     ],
     "rewrites": [
       {
@@ -80,5 +78,32 @@
         "destination": "/index.html"
       }
     ]
+  },
+  "storage": {
+    "rules": "storage.rules"
+  },
+  "database": {
+    "rules": "database.rules.json"
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "animemusic-e8c09",
+          "appId": "1:207784872626:android:30a56c8ab5d159420f17ab",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "animemusic-e8c09",
+          "configurations": {
+            "android": "1:207784872626:android:30a56c8ab5d159420f17ab",
+            "ios": "1:207784872626:ios:da5df5bbe58269970f17ab",
+            "web": "1:207784872626:web:085d3aabd00fd0e60f17ab"
+          }
+        }
+      }
+    }
   }
 }

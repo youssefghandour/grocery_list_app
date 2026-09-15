@@ -23,7 +23,7 @@ final authStateProvider = StreamProvider<User?>((ref) {
 });
 
 final currentFirebaseUserProvider = Provider<User?>((ref) {
-  return ref.watch(authStateProvider).valueOrNull;
+  return ref.watch(authStateProvider).value;
 });
 
 // ---------------------------------------------------------------------------
@@ -41,13 +41,12 @@ final appUserProvider = StreamProvider<AppUser?>((ref) {
 // Auth controller
 // ---------------------------------------------------------------------------
 
-class AuthController extends StateNotifier<AsyncValue<void>> {
-  AuthController(this._ref) : super(const AsyncData(null));
+class AuthController extends Notifier<AsyncValue<void>> {
+  @override
+  AsyncValue<void> build() => const AsyncData(null);
 
-  final Ref _ref;
-
-  AuthService get _auth => _ref.read(authServiceProvider);
-  FirestoreService get _firestore => _ref.read(firestoreServiceProvider);
+  AuthService get _auth => ref.read(authServiceProvider);
+  FirestoreService get _firestore => ref.read(firestoreServiceProvider);
 
   Future<void> signInWithEmail(String email, String password) async {
     state = const AsyncLoading();
@@ -81,7 +80,10 @@ class AuthController extends StateNotifier<AsyncValue<void>> {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       final credential = await _auth.signInWithGoogle();
-      final user = credential.user!;
+      final user = credential?.user;
+
+      if (user == null) return;
+
       final existing = await _firestore.getUser(user.uid);
       if (existing == null) {
         await _firestore.createUserProfile(
@@ -108,6 +110,4 @@ class AuthController extends StateNotifier<AsyncValue<void>> {
 }
 
 final authControllerProvider =
-    StateNotifierProvider<AuthController, AsyncValue<void>>((ref) {
-  return AuthController(ref);
-});
+    NotifierProvider<AuthController, AsyncValue<void>>(AuthController.new);

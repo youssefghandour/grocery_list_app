@@ -8,10 +8,11 @@ import 'screens/auth/register_screen.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/household/create_household_screen.dart';
 import 'screens/household/join_household_screen.dart';
-// import 'screens/home/purchase_later_screen.dart';
+import 'screens/settings/upgrade_screen.dart';
 
 import 'package:google_fonts/google_fonts.dart';
 import 'services/deep_link_service.dart';
+import 'services/payment_service.dart';
 
 class AppColors {
   // Brand Market Green Palette
@@ -49,10 +50,10 @@ class _Na2slnaAppState extends ConsumerState<Na2slnaApp> {
   @override
   void initState() {
     super.initState();
-    // Delay initialization until the app is fully built
-    Future.microtask(() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         ref.read(deepLinkServiceProvider).initialize(_scaffoldMessengerKey);
+        ref.read(paymentServiceProvider).initialize();
       }
     });
   }
@@ -60,6 +61,10 @@ class _Na2slnaAppState extends ConsumerState<Na2slnaApp> {
   @override
   Widget build(BuildContext context) {
     final textTheme = GoogleFonts.plusJakartaSansTextTheme();
+    final themeMode = ref.watch(themeModeProvider);
+    final appTheme = ref.watch(appThemeProvider);
+
+    final isGoldTheme = appTheme == AppTheme.egyptianGold;
 
     return MaterialApp(
       title: 'Na2slna',
@@ -69,16 +74,16 @@ class _Na2slnaAppState extends ConsumerState<Na2slnaApp> {
         useMaterial3: true,
         textTheme: textTheme,
         colorScheme: ColorScheme.light(
-          primary: AppColors.primary,
+          primary: isGoldTheme ? const Color(0xFFC5A021) : AppColors.primary,
           onPrimary: Colors.white,
-          primaryContainer: AppColors.primaryContainer,
-          onPrimaryContainer: const Color(0xFF1B5E20),
+          primaryContainer: isGoldTheme ? const Color(0xFFFFF4D1) : AppColors.primaryContainer,
+          onPrimaryContainer: isGoldTheme ? const Color(0xFF5E4B00) : const Color(0xFF1B5E20),
           secondary: AppColors.goldAccent,
           onSecondary: Colors.white,
           secondaryContainer: AppColors.goldAccent.withValues(alpha: 0.1),
           onSecondaryContainer: AppColors.goldAccent,
           tertiary: const Color(0xFF923357),
-          surface: AppColors.surface,
+          surface: isGoldTheme ? const Color(0xFFFFFBF0) : AppColors.surface,
           onSurface: AppColors.textPrimary,
           surfaceContainerHighest: AppColors.outlineVariant,
           onSurfaceVariant: AppColors.textSecondary,
@@ -86,17 +91,17 @@ class _Na2slnaAppState extends ConsumerState<Na2slnaApp> {
           outlineVariant: AppColors.outlineVariant,
           error: const Color(0xFFBA1A1A),
         ),
-        scaffoldBackgroundColor: AppColors.surface,
+        scaffoldBackgroundColor: isGoldTheme ? const Color(0xFFFFFBF0) : AppColors.surface,
         cardTheme: CardThemeData(
           elevation: 1,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           color: Colors.white,
         ),
         navigationBarTheme: NavigationBarThemeData(
-          indicatorColor: AppColors.goldAccent.withValues(alpha: 0.15),
+          indicatorColor: (isGoldTheme ? const Color(0xFFC5A021) : AppColors.goldAccent).withValues(alpha: 0.15),
           iconTheme: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.selected)) {
-              return const IconThemeData(color: Color(0xFF785900));
+              return IconThemeData(color: isGoldTheme ? const Color(0xFF5E4B00) : const Color(0xFF785900));
             }
             return const IconThemeData(color: AppColors.textSecondary);
           }),
@@ -114,12 +119,12 @@ class _Na2slnaAppState extends ConsumerState<Na2slnaApp> {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+            borderSide: BorderSide(color: isGoldTheme ? const Color(0xFFC5A021) : AppColors.primary, width: 1.5),
           ),
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         ),
-        bottomAppBarTheme: const BottomAppBarThemeData(
-          color: Color(0xFF1B5E20),
+        bottomAppBarTheme: BottomAppBarThemeData(
+          color: isGoldTheme ? const Color(0xFFC5A021) : const Color(0xFF1B5E20),
           elevation: 3,
         ),
         filledButtonTheme: FilledButtonThemeData(
@@ -141,29 +146,29 @@ class _Na2slnaAppState extends ConsumerState<Na2slnaApp> {
         ),
         dialogTheme: DialogThemeData(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-          backgroundColor: AppColors.surface,
+          backgroundColor: isGoldTheme ? const Color(0xFFFFFBF0) : AppColors.surface,
           surfaceTintColor: Colors.transparent,
         ),
       ),
       darkTheme: ThemeData(
         useMaterial3: true,
         textTheme: GoogleFonts.plusJakartaSansTextTheme(ThemeData.dark().textTheme),
-        colorScheme: const ColorScheme.dark(
-          primary: Color(0xFF4CAF50), // Vibrant Green for Price/Titles
-          onPrimary: Colors.white,
-          primaryContainer: Color(0xFF2E7D32), // Deeper Green for FAB
+        colorScheme: ColorScheme.dark(
+          primary: isGoldTheme ? const Color(0xFFFFD700) : const Color(0xFF4CAF50),
+          onPrimary: Colors.black,
+          primaryContainer: isGoldTheme ? const Color(0xFFB8860B) : const Color(0xFF2E7D32),
           onPrimaryContainer: Colors.white,
-          secondary: AppColors.goldAccent, // Egyptian Gold #FFA000
+          secondary: AppColors.goldAccent,
           onSecondary: Colors.black,
-          secondaryContainer: Color(0xFF3F2E00),
+          secondaryContainer: const Color(0xFF3F2E00),
           onSecondaryContainer: AppColors.goldAccent,
-          surface: Color(0xFF121411), // Obsidian background
-          onSurface: Color(0xFFE2E3DD),
-          surfaceContainerLow: Color(0xFF1B211A), // Card background (greenish-grey)
-          surfaceContainer: Color(0xFF151914),    // Item background (darker)
-          surfaceContainerHigh: Color(0xFF252923),
-          outline: Color(0xFF44483F),
-          outlineVariant: Color(0xFF2C312A),
+          surface: const Color(0xFF121411),
+          onSurface: const Color(0xFFE2E3DD),
+          surfaceContainerLow: const Color(0xFF1B211A),
+          surfaceContainer: const Color(0xFF151914),
+          surfaceContainerHigh: const Color(0xFF252923),
+          outline: const Color(0xFF44483F),
+          outlineVariant: const Color(0xFF2C312A),
         ),
         scaffoldBackgroundColor: const Color(0xFF121411),
         cardTheme: CardThemeData(
@@ -172,44 +177,43 @@ class _Na2slnaAppState extends ConsumerState<Na2slnaApp> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         ),
         floatingActionButtonTheme: FloatingActionButtonThemeData(
-          backgroundColor: const Color(0xFF2E7D32),
+          backgroundColor: isGoldTheme ? const Color(0xFFB8860B) : const Color(0xFF2E7D32),
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         ),
         navigationBarTheme: NavigationBarThemeData(
           backgroundColor: const Color(0xFF121411),
           elevation: 0,
-          indicatorColor: const Color(0xFF4CAF50).withValues(alpha: 0.1),
+          indicatorColor: (isGoldTheme ? const Color(0xFFFFD700) : const Color(0xFF4CAF50)).withValues(alpha: 0.1),
           iconTheme: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.selected)) {
-              return const IconThemeData(color: Color(0xFF4CAF50));
+              return IconThemeData(color: isGoldTheme ? const Color(0xFFFFD700) : const Color(0xFF4CAF50));
             }
             return const IconThemeData(color: Color(0xFF8D9286));
           }),
           labelTextStyle: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.selected)) {
-              return const TextStyle(color: Color(0xFF4CAF50), fontSize: 12, fontWeight: FontWeight.bold);
+              return TextStyle(color: isGoldTheme ? const Color(0xFFFFD700) : const Color(0xFF4CAF50), fontSize: 12, fontWeight: FontWeight.bold);
             }
             return const TextStyle(color: Color(0xFF8D9286), fontSize: 12);
           }),
         ),
       ),
-      themeMode: ref.watch(themeModeProvider),
+      themeMode: themeMode,
       routes: {
         '/': (_) => const _AuthGate(),
         '/login': (_) => const LoginScreen(),
         '/register': (_) => const RegisterScreen(),
         '/home': (_) => const HomeScreen(),
-        // '/purchase-later': (_) => const PurchaseLaterScreen(),
         '/create-household': (_) => const CreateHouseholdScreen(),
         '/join-household': (_) => const JoinHouseholdScreen(),
+        '/upgrade': (_) => const UpgradeScreen(),
       },
       initialRoute: '/',
     );
   }
 }
 
-/// Routes authenticated users to HomeScreen, others to LoginScreen.
 class _AuthGate extends ConsumerWidget {
   const _AuthGate();
 

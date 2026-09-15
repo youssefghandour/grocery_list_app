@@ -39,17 +39,24 @@ class _QuickAddBarState extends ConsumerState<QuickAddBar> {
 
   Future<void> _submit() async {
     final name = _controller.text.trim();
-    if (name.isEmpty) return;
+    if (name.isEmpty || _isAdding) return;
 
     setState(() => _isAdding = true);
 
-    await ref.read(groceryListControllerProvider.notifier).addItem(
-      name: name,
-      quantity: '1.0',
-    );
+    await ref
+        .read(groceryListControllerProvider.notifier)
+        .addItem(name: name, quantity: '1.0');
 
     if (mounted) {
-      _controller.clear();
+      if (ref.read(groceryListControllerProvider).hasError) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not add the item. Please try again.'),
+          ),
+        );
+      } else {
+        _controller.clear();
+      }
       setState(() => _isAdding = false);
       _focusNode.requestFocus();
     }
@@ -77,12 +84,14 @@ class _QuickAddBarState extends ConsumerState<QuickAddBar> {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       height: 52,
       decoration: BoxDecoration(
-        color: isDark ? theme.colorScheme.surfaceContainer : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+        color: isDark
+            ? theme.colorScheme.surfaceContainer
+            : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
         borderRadius: BorderRadius.circular(26),
         border: Border.all(
           color: isDark
-            ? theme.colorScheme.outline.withValues(alpha: 0.2)
-            : theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+              ? theme.colorScheme.outline.withValues(alpha: 0.2)
+              : theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
         ),
       ),
       child: Row(
@@ -91,6 +100,7 @@ class _QuickAddBarState extends ConsumerState<QuickAddBar> {
             child: TextField(
               controller: _controller,
               focusNode: _focusNode,
+              readOnly: _isAdding,
               decoration: const InputDecoration(
                 hintText: 'Add items to your list...',
                 border: InputBorder.none,
@@ -111,7 +121,11 @@ class _QuickAddBarState extends ConsumerState<QuickAddBar> {
           if (_isAdding)
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 8),
-              child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
             )
           else if (_hasText)
             _ActionButton(
@@ -119,7 +133,7 @@ class _QuickAddBarState extends ConsumerState<QuickAddBar> {
               onTap: _submit,
               color: theme.colorScheme.primary,
             ),
-            // _ActionButton(icon: Icons.qr_code_scanner, onTap: _scanBarcode),
+          // _ActionButton(icon: Icons.qr_code_scanner, onTap: _scanBarcode),
         ],
       ),
     );
@@ -135,9 +149,15 @@ class _ActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return IconButton(
-      icon: Icon(icon,
-          size: 20,
-          color: color ?? Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7)),
+      icon: Icon(
+        icon,
+        size: 20,
+        color:
+            color ??
+            Theme.of(
+              context,
+            ).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+      ),
       onPressed: onTap,
       padding: EdgeInsets.zero,
       constraints: const BoxConstraints(minWidth: 36, minHeight: 36),

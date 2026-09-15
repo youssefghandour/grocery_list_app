@@ -45,9 +45,6 @@
 /ios/Runner/GeneratedPluginRegistrant.h
 /ios/Runner/GeneratedPluginRegistrant.m
 
-# Web-specific
-/web/manifest.json
-
 # macOS-specific
 /macos/Flutter/GeneratedPluginRegistrant.swift
 /macos/Flutter/ephemeral/

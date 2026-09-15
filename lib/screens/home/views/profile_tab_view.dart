@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../../models/user_model.dart';
 import '../../../providers/auth_provider.dart';
+import '../../../providers/entitlement_provider.dart';
 import '../../../providers/household_provider.dart';
 import '../../../providers/home_provider.dart';
 import '../../../providers/settings_provider.dart';
@@ -34,11 +35,16 @@ class ProfileTabView extends ConsumerWidget {
           autofocus: true,
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () async {
               if (controller.text.trim().isNotEmpty) {
-                await ref.read(firestoreServiceProvider).updateDisplayName(appUser.uid, controller.text.trim());
+                await ref
+                    .read(firestoreServiceProvider)
+                    .updateDisplayName(appUser.uid, controller.text.trim());
                 if (ctx.mounted) Navigator.pop(ctx);
               }
             },
@@ -51,20 +57,77 @@ class ProfileTabView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final household = ref.watch(householdProvider).valueOrNull;
-    final members = ref.watch(householdMembersProvider).valueOrNull ?? [];
+    final household = ref.watch(householdProvider).value;
+    final members = ref.watch(householdMembersProvider).value ?? [];
     final themeMode = ref.watch(themeModeProvider);
-    
+    final isGold = ref.watch(effectiveGoldProvider);
+    final isPro = ref.watch(effectiveProProvider);
+
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? theme.colorScheme.surface : const Color(0xFFF9FBF6),
+      backgroundColor: isDark
+          ? theme.colorScheme.surface
+          : const Color(0xFFF9FBF6),
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // 0. Upgrade Banner
+              if (!isPro)
+                InkWell(
+                  onTap: () => Navigator.pushNamed(context, '/upgrade'),
+                  child: Container(
+                    margin: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF2E7D32), Color(0xFF1B5E20)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.star_rounded,
+                          color: Color(0xFFFFA000),
+                          size: 32,
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Upgrade to Na2slna Pro',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              Text(
+                                'Unlock the full power of shared lists.',
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.8),
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(
+                          Icons.chevron_right,
+                          color: Colors.white.withValues(alpha: 0.5),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               HomeTopHeader(user: appUser),
               Padding(
                 padding: const EdgeInsets.all(16.0),
@@ -98,18 +161,34 @@ class ProfileTabView extends ConsumerWidget {
                     ),
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFFE8F5E9),
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.green.withValues(alpha: 0.2)),
+                        border: Border.all(
+                          color: Colors.green.withValues(alpha: 0.2),
+                        ),
                       ),
                       child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.verified_user, color: Colors.green, size: 12),
+                          Icon(
+                            Icons.verified_user,
+                            color: Colors.green,
+                            size: 12,
+                          ),
                           SizedBox(width: 4),
-                          Text('Connected', style: TextStyle(color: Colors.green, fontSize: 10, fontWeight: FontWeight.bold)),
+                          Text(
+                            'Connected',
+                            style: TextStyle(
+                              color: Colors.green,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -124,9 +203,18 @@ class ProfileTabView extends ConsumerWidget {
                 decoration: BoxDecoration(
                   color: theme.colorScheme.surface,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
+                  border: Border.all(
+                    color: theme.colorScheme.outlineVariant.withValues(
+                      alpha: 0.5,
+                    ),
+                  ),
                   boxShadow: [
-                    if (!isDark) BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4)),
+                    if (!isDark)
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.03),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
                   ],
                 ),
                 child: Column(
@@ -135,33 +223,53 @@ class ProfileTabView extends ConsumerWidget {
                       children: [
                         CircleAvatar(
                           radius: 32,
-                          backgroundImage: appUser.imageUrl != null ? NetworkImage(appUser.imageUrl!) : null,
-                          child: appUser.imageUrl == null ? const Icon(Icons.person, size: 32) : null,
+                          backgroundImage: appUser.imageUrl != null
+                              ? NetworkImage(appUser.imageUrl!)
+                              : null,
+                          child: appUser.imageUrl == null
+                              ? const Icon(Icons.person, size: 32)
+                              : null,
                         ),
                         const SizedBox(width: 16),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(appUser.displayName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                              Text(
+                                appUser.displayName,
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                               const SizedBox(height: 4),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 2,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+                                  color: theme.colorScheme.primaryContainer
+                                      .withValues(alpha: 0.3),
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Text(
-                                  appUser.role.name == 'familyAdmin' ? 'Household Organizer' : 'Family Member',
-                                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
+                                  appUser.role.name == 'familyAdmin'
+                                      ? 'Household Organizer'
+                                      : 'Family Member',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: theme.colorScheme.primary,
+                                  ),
                                 ),
                               ),
                             ],
                           ),
                         ),
                         IconButton(
-                          onPressed: () => _showEditNameDialog(context, ref), 
-                          icon: const Icon(Icons.edit_outlined, size: 20)
+                          onPressed: () => _showEditNameDialog(context, ref),
+                          icon: const Icon(Icons.edit_outlined, size: 20),
                         ),
                       ],
                     ),
@@ -180,7 +288,11 @@ class ProfileTabView extends ConsumerWidget {
                 decoration: BoxDecoration(
                   color: theme.colorScheme.surface,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
+                  border: Border.all(
+                    color: theme.colorScheme.outlineVariant.withValues(
+                      alpha: 0.5,
+                    ),
+                  ),
                 ),
                 child: Column(
                   children: [
@@ -192,14 +304,27 @@ class ProfileTabView extends ConsumerWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(household?.name ?? 'My Household', style: const TextStyle(fontWeight: FontWeight.bold)),
-                              Text('${members.length} Active Members Syncing', style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant)),
+                              Text(
+                                household?.name ?? 'My Household',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                '${members.length} Active Members Syncing',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
                             ],
                           ),
                         ),
                         TextButton(
-                          onPressed: () => ref.read(navigationIndexProvider.notifier).state = 1, 
-                          child: const Text('Manage >')
+                          onPressed: () => ref
+                              .read(navigationIndexProvider.notifier)
+                              .setIndex(1),
+                          child: const Text('Manage >'),
                         ),
                       ],
                     ),
@@ -214,23 +339,46 @@ class ProfileTabView extends ConsumerWidget {
                         InkWell(
                           onTap: () {
                             if (household?.inviteCode != null) {
-                              Clipboard.setData(ClipboardData(text: household!.inviteCode));
+                              Clipboard.setData(
+                                ClipboardData(text: household!.inviteCode),
+                              );
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Invite code copied to clipboard')),
+                                const SnackBar(
+                                  content: Text(
+                                    'Invite code copied to clipboard',
+                                  ),
+                                ),
                               );
                             }
                           },
                           borderRadius: BorderRadius.circular(10),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
                             decoration: BoxDecoration(
-                              color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                              color: theme.colorScheme.surfaceContainerHighest
+                                  .withValues(alpha: 0.3),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Row(
                               children: [
-                                Text('Code: ', style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant)),
-                                Text(household?.inviteCode ?? '------', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 1)),
+                                Text(
+                                  'Code: ',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                                Text(
+                                  household?.inviteCode ?? '------',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                    letterSpacing: 1,
+                                  ),
+                                ),
                                 const SizedBox(width: 8),
                                 const Icon(Icons.copy, size: 14),
                               ],
@@ -249,7 +397,11 @@ class ProfileTabView extends ConsumerWidget {
                 decoration: BoxDecoration(
                   color: theme.colorScheme.surface,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
+                  border: Border.all(
+                    color: theme.colorScheme.outlineVariant.withValues(
+                      alpha: 0.5,
+                    ),
+                  ),
                 ),
                 child: Column(
                   children: [
@@ -257,25 +409,69 @@ class ProfileTabView extends ConsumerWidget {
                       icon: Icons.dark_mode_outlined,
                       title: 'App Appearance',
                       subtitle: 'Theme & visual display',
-                      trailing: Text(themeMode == ThemeMode.dark ? 'Dark Mode' : 'Light Mode', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+                      trailing: Text(
+                        themeMode == ThemeMode.dark
+                            ? 'Dark Mode'
+                            : 'Light Mode',
+                        style: TextStyle(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
                       onTap: () {
-                        ref.read(themeModeProvider.notifier).state = 
-                          themeMode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
+                        ref
+                            .read(themeModeProvider.notifier)
+                            .setTheme(
+                              themeMode == ThemeMode.dark
+                                  ? ThemeMode.light
+                                  : ThemeMode.dark,
+                            );
                       },
                     ),
+                    if (isGold)
+                      ProfileListTile(
+                        icon: Icons.palette_outlined,
+                        title: 'Premium Theme',
+                        subtitle:
+                            ref.watch(appThemeProvider) == AppTheme.egyptianGold
+                            ? 'Egyptian Gold'
+                            : 'Standard',
+                        trailing: Icon(
+                          Icons.color_lens_outlined,
+                          color: theme.colorScheme.primary,
+                        ),
+                        onTap: () {
+                          final current = ref.read(appThemeProvider);
+                          ref
+                              .read(appThemeProvider.notifier)
+                              .setTheme(
+                                current == AppTheme.standard
+                                    ? AppTheme.egyptianGold
+                                    : AppTheme.standard,
+                              );
+                        },
+                      ),
                     const ProfileListTile(
                       icon: Icons.translate,
                       title: 'Language',
                       subtitle: 'Current display tongue',
-                      trailing: Text('English / العربية', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 12)),
+                      trailing: Text(
+                        'English / العربية',
+                        style: TextStyle(
+                          color: Colors.green,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
                     ),
                     ProfileListTile(
                       icon: Icons.notifications_none_outlined,
                       title: 'List Notifications',
                       subtitle: 'When family adds items or checks off',
                       trailing: Switch(
-                        value: appUser.notificationsEnabled, 
-                        onChanged: (v) => ref.read(firestoreServiceProvider).updateNotificationPreference(appUser.uid, v),
+                        value: appUser.notificationsEnabled,
+                        onChanged: (v) => ref
+                            .read(firestoreServiceProvider)
+                            .updateNotificationPreference(appUser.uid, v),
                         activeThumbColor: Colors.green,
                       ),
                     ),
@@ -283,14 +479,19 @@ class ProfileTabView extends ConsumerWidget {
                       icon: Icons.monetization_on_outlined,
                       title: 'Market Currency',
                       subtitle: 'Supermarket pricing comparison',
-                      trailing: Text('EGP (ج.م) >', style: TextStyle(color: Colors.grey)),
+                      trailing: Text(
+                        'EGP (ج.م) >',
+                        style: TextStyle(color: Colors.grey),
+                      ),
                     ),
                     ProfileListTile(
                       icon: Icons.group_add_outlined,
                       title: 'Household Management',
                       subtitle: 'Roles, permissions & QR invites',
                       showDivider: false,
-                      onTap: () => ref.read(navigationIndexProvider.notifier).state = 1,
+                      onTap: () => ref
+                          .read(navigationIndexProvider.notifier)
+                          .setIndex(1),
                     ),
                   ],
                 ),
@@ -302,23 +503,33 @@ class ProfileTabView extends ConsumerWidget {
                 decoration: BoxDecoration(
                   color: theme.colorScheme.surface,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
+                  border: Border.all(
+                    color: theme.colorScheme.outlineVariant.withValues(
+                      alpha: 0.5,
+                    ),
+                  ),
                 ),
                 child: Column(
                   children: [
                     ProfileListTile(
                       icon: Icons.help_outline,
                       title: 'Help Center & FAQ',
-                      trailing: const Icon(Icons.open_in_new, size: 16, color: Colors.grey),
+                      trailing: const Icon(
+                        Icons.open_in_new,
+                        size: 16,
+                        color: Colors.grey,
+                      ),
                       onTap: () => _launchUrl('https://na2slna.web.app/help'),
                     ),
                     ProfileListTile(
                       icon: Icons.share_outlined,
                       title: 'Share Na2slna with Friends',
                       onTap: () {
-                        Share.share(
-                          'Na2slna - Shared Grocery Lists for the Family! 🛒\n\nInstantly sync items, track prices, and stay organized. Join the beta now!\n\nDownload: https://na2slna.web.app',
-                          subject: 'Na2slna: Shared Grocery List',
+                        SharePlus.instance.share(
+                          ShareParams(
+                            text:
+                                'Na2slna - Shared Grocery Lists for the Family! 🛒\n\nInstantly sync items, track prices, and stay organized. Join the beta now!\n\nDownload: https://na2slna.web.app',
+                          ),
                         );
                       },
                     ),
@@ -326,7 +537,8 @@ class ProfileTabView extends ConsumerWidget {
                       icon: Icons.privacy_tip_outlined,
                       title: 'Privacy Policy & Terms',
                       showDivider: false,
-                      onTap: () => _launchUrl('https://na2slna.web.app/privacy'),
+                      onTap: () =>
+                          _launchUrl('https://na2slna.web.app/privacy'),
                     ),
                   ],
                 ),
@@ -336,14 +548,23 @@ class ProfileTabView extends ConsumerWidget {
               const Center(
                 child: Text(
                   '• شرف اللي ناقص.. والكل يعرف •',
-                  style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 12),
+                  style: TextStyle(
+                    color: Colors.green,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
                 ),
               ),
               const SizedBox(height: 4),
               Center(
                 child: Text(
                   'Na2slna (Beta) v1.1.0 (Build 204)',
-                  style: TextStyle(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5), fontSize: 10),
+                  style: TextStyle(
+                    color: theme.colorScheme.onSurfaceVariant.withValues(
+                      alpha: 0.5,
+                    ),
+                    fontSize: 10,
+                  ),
                 ),
               ),
 
@@ -351,14 +572,20 @@ class ProfileTabView extends ConsumerWidget {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: OutlinedButton(
-                  onPressed: () => ref.read(authControllerProvider.notifier).signOut(),
+                  onPressed: () =>
+                      ref.read(authControllerProvider.notifier).signOut(),
                   style: OutlinedButton.styleFrom(
                     minimumSize: const Size(double.infinity, 50),
                     foregroundColor: Colors.red,
                     side: const BorderSide(color: Colors.red, width: 1.5),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
-                  child: const Text('Log Out', style: TextStyle(fontWeight: FontWeight.bold)),
+                  child: const Text(
+                    'Log Out',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
               ),
               const SizedBox(height: 100),
@@ -392,8 +619,17 @@ class ProfileTabView extends ConsumerWidget {
                     : null,
                 child: displayMembers[i].imageUrl == null
                     ? Text(
-                        displayMembers[i].displayName[0].toUpperCase(),
-                        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                        displayMembers[i].displayName.trim().isEmpty
+                            ? '?'
+                            : displayMembers[i].displayName
+                                  .trim()
+                                  .characters
+                                  .first
+                                  .toUpperCase(),
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
                       )
                     : null,
               ),
@@ -406,7 +642,11 @@ class ProfileTabView extends ConsumerWidget {
                 backgroundColor: Colors.grey,
                 child: Text(
                   '+$remainingCount',
-                  style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
@@ -421,8 +661,13 @@ class ProfileTabView extends ConsumerWidget {
       children: [
         Icon(icon, size: 16, color: theme.colorScheme.onSurfaceVariant),
         const SizedBox(width: 8),
-        Text(text, style: TextStyle(fontSize: 13, color: theme.colorScheme.onSurfaceVariant)),
-
+        Text(
+          text,
+          style: TextStyle(
+            fontSize: 13,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
       ],
     );
   }

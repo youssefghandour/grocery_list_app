@@ -16,8 +16,6 @@ class DefaultFirebaseOptions {
         return android;
       case TargetPlatform.iOS:
         return ios;
-      case TargetPlatform.macOS:
-        return macos;
       default:
         throw UnsupportedError(
           'DefaultFirebaseOptions are not supported for this platform.',
@@ -28,14 +26,14 @@ class DefaultFirebaseOptions {
   // Replace with values from Firebase Console → Project Settings.
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyC35pTOOm6njJaaX3YRimCYAoI-tUi6bkk',
-    appId: '1:207784872626:web:c6141cd89c4dc6ca0f17ab',
+    apiKey: 'AIzaSyAZicC8fzORgB8V8PuXSewizuTcq2IH6es',
+    appId: '1:207784872626:web:085d3aabd00fd0e60f17ab',
     messagingSenderId: '207784872626',
     projectId: 'animemusic-e8c09',
     authDomain: 'animemusic-e8c09.firebaseapp.com',
     databaseURL: 'https://animemusic-e8c09.firebaseio.com',
     storageBucket: 'animemusic-e8c09.appspot.com',
-    measurementId: 'G-D7KWP9XE9V',
+    measurementId: 'G-337YQHEKH2',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
@@ -53,16 +51,8 @@ class DefaultFirebaseOptions {
     projectId: 'animemusic-e8c09',
     databaseURL: 'https://animemusic-e8c09.firebaseio.com',
     storageBucket: 'animemusic-e8c09.appspot.com',
-    androidClientId: '207784872626-1ls448nnv4ijnpqvi4pjeejbnhqp23dn.apps.googleusercontent.com',
+    androidClientId: '207784872626-9bhl9heu5le0amo5ude622d34rm9ij73.apps.googleusercontent.com',
     iosClientId: '207784872626-pdh0lq5vajeb2lto2834ec98kdup76nb.apps.googleusercontent.com',
     iosBundleId: 'com.ghandour.na2slna',
-  );
-  static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'YOUR_IOS_API_KEY',
-    appId: 'YOUR_IOS_APP_ID',
-    messagingSenderId: 'YOUR_MESSAGING_SENDER_ID',
-    projectId: 'YOUR_PROJECT_ID',
-    storageBucket: 'YOUR_PROJECT_ID.appspot.com',
-    iosBundleId: 'com.example.groceryListApp',
   );
 }

@@ -12,6 +12,8 @@ class AppUser {
     this.householdId,
     this.fcmToken,
     this.notificationsEnabled = true,
+    this.isPro = false,
+    this.isGold = false,
     required this.createdAt,
     this.updatedAt,
   });
@@ -24,6 +26,8 @@ class AppUser {
   final String? householdId;
   final String? fcmToken;
   final bool notificationsEnabled;
+  final bool isPro;
+  final bool isGold;
   final DateTime createdAt;
   final DateTime? updatedAt;
 
@@ -40,6 +44,8 @@ class AppUser {
       householdId: data['householdId'] as String?,
       fcmToken: data['fcmToken'] as String?,
       notificationsEnabled: data['notificationsEnabled'] as bool? ?? true,
+      isPro: data['isPro'] as bool? ?? false,
+      isGold: data['isGold'] as bool? ?? false,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
     );
@@ -54,6 +60,8 @@ class AppUser {
       if (householdId != null) 'householdId': householdId,
       if (fcmToken != null) 'fcmToken': fcmToken,
       'notificationsEnabled': notificationsEnabled,
+      'isPro': isPro,
+      'isGold': isGold,
       'createdAt': Timestamp.fromDate(createdAt),
       if (updatedAt != null) 'updatedAt': Timestamp.fromDate(updatedAt!),
     };
@@ -66,6 +74,8 @@ class AppUser {
     String? householdId,
     String? fcmToken,
     bool? notificationsEnabled,
+    bool? isPro,
+    bool? isGold,
     DateTime? updatedAt,
   }) {
     return AppUser(
@@ -77,6 +87,8 @@ class AppUser {
       householdId: householdId ?? this.householdId,
       fcmToken: fcmToken ?? this.fcmToken,
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
+      isPro: isPro ?? this.isPro,
+      isGold: isGold ?? this.isGold,
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

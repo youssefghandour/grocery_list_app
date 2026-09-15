@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:app_links/app_links.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
@@ -17,6 +18,14 @@ class DeepLinkService {
 
   void initialize(GlobalKey<ScaffoldMessengerState> messengerKey) async {
     _messengerKey = messengerKey;
+
+    if (kIsWeb) {
+      // app_links can encounter stream interaction context exceptions on full web loads
+      // We can parse the initial browser URI naturally instead
+      final currentUri = Uri.parse(WidgetsBinding.instance.platformDispatcher.defaultRouteName);
+      _handleUri(currentUri);
+      return;
+    }
 
     // 1. Handle deep link when the app is already open
     _linkSubscription = _appLinks.uriLinkStream.listen((uri) {
@@ -44,7 +53,7 @@ class DeepLinkService {
     // AND https://animemusic-e8c09.web.app/join?code=ABC123
     // AND even na2slna:join?code=ABC123
     bool isJoinLink = (uri.scheme == 'na2slna' && (uri.host == 'join' || path == 'join')) ||
-                     (uri.scheme == 'https' && uri.host == 'animemusic-e8c09.web.app' && path == 'join');
+                     (uri.scheme == 'https' && (uri.host == 'animemusic-e8c09.web.app' || uri.host == 'na2slna.web.app') && path == 'join');
 
     if (isJoinLink) {
       final code = uri.queryParameters['code'];

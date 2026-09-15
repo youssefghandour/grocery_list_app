@@ -29,6 +29,14 @@
 		<dict>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.207784872626-pdh0lq5vajeb2lto2834ec98kdup76nb</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
 			<key>CFBundleURLName</key>
 			<string>na2slna.join</string>
 			<key>CFBundleURLSchemes</key>
@@ -37,8 +45,28 @@
 			</array>
 		</dict>
 	</array>
+	<key>GIDClientID</key>
+	<string>207784872626-pdh0lq5vajeb2lto2834ec98kdup76nb.apps.googleusercontent.com</string>
+	<key>GADApplicationIdentifier</key>
+	<string>$(IOS_ADMOB_APP_ID)</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Scan household invitation codes and take photos of grocery items.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Choose photos to help your household identify grocery items.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Use the microphone when voice input is enabled for grocery item names.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Turn spoken grocery item names into text when voice input is enabled.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+		<string>remote-notification</string>
+	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<!-- app_links handles incoming links instead of Flutter's route handler. -->
+	<key>FlutterDeepLinkingEnabled</key>
+	<false/>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

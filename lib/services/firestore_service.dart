@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
 import '../constants/app_constants.dart';
 import '../constants/user_roles.dart';
@@ -10,10 +11,11 @@ import '../models/household_model.dart';
 import '../models/user_model.dart';
 
 class FirestoreService {
-  FirestoreService({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+  FirestoreService({FirebaseFirestore? firestore, this.acceptInvitation})
+    : _firestore = firestore ?? FirebaseFirestore.instance;
 
   final FirebaseFirestore _firestore;
+  final Future<String> Function(String inviteCode)? acceptInvitation;
   final _random = Random.secure();
 
   CollectionReference<Map<String, dynamic>> get _users =>
@@ -100,17 +102,17 @@ class FirestoreService {
   }
 
   Future<void> updateHouseholdName(String householdId, String newName) async {
-    await _households.doc(householdId).update({
-      'name': newName.trim(),
-    });
+    await _households.doc(householdId).update({'name': newName.trim()});
   }
 
   Future<Household> createHousehold({
     required String name,
     required String userId,
   }) async {
+    if (name.trim().isEmpty || name.trim().length > 120) {
+      throw ArgumentError('Enter a household name of 1 to 120 characters.');
+    }
     final inviteCode = _generateInviteCode();
-    final now = DateTime.now();
     final householdRef = _households.doc();
 
     await _firestore.runTransaction((transaction) async {
@@ -118,7 +120,7 @@ class FirestoreService {
         'name': name.trim(),
         'inviteCode': inviteCode,
         'createdBy': userId,
-        'createdAt': Timestamp.fromDate(now),
+        'createdAt': FieldValue.serverTimestamp(),
       });
 
       // Create a default list for the new household
@@ -128,13 +130,13 @@ class FirestoreService {
       transaction.set(defaultListRef, {
         'name': 'Main List',
         'createdBy': userId,
-        'createdAt': Timestamp.fromDate(now),
+        'createdAt': FieldValue.serverTimestamp(),
         'isDefault': true,
       });
 
       transaction.set(_inviteCodes.doc(inviteCode), {
         'householdId': householdRef.id,
-        'createdAt': Timestamp.fromDate(now),
+        'createdAt': FieldValue.serverTimestamp(),
       });
 
       transaction.update(_users.doc(userId), {
@@ -153,34 +155,64 @@ class FirestoreService {
     required String userId,
   }) async {
     final normalizedCode = inviteCode.trim().toUpperCase();
-    final inviteDoc = await _inviteCodes.doc(normalizedCode).get();
-
-    if (!inviteDoc.exists) {
+    if (!RegExp(r'^[A-Z0-9]{6}$').hasMatch(normalizedCode)) {
       throw FirebaseException(
         plugin: 'cloud_firestore',
         code: 'invite-not-found',
         message: 'Invalid invite code.',
       );
     }
-
-    final householdId = inviteDoc.data()!['householdId'] as String;
-    final householdDoc = await _households.doc(householdId).get();
-
-    if (!householdDoc.exists) {
+    try {
+      // The server derives identity from Firebase Auth. Never send a claimed UID.
+      final String householdId;
+      if (acceptInvitation != null) {
+        householdId = await acceptInvitation!(normalizedCode);
+      } else {
+        final result =
+            await FirebaseFunctions.instanceFor(region: 'us-central1')
+                .httpsCallable('joinHousehold')
+                .call<Map<String, dynamic>>({'inviteCode': normalizedCode});
+        householdId = result.data['householdId'] as String;
+      }
+      final householdDoc = await _households.doc(householdId).get();
+      if (!householdDoc.exists) {
+        throw FirebaseException(
+          plugin: 'cloud_firestore',
+          code: 'household-not-found',
+          message: 'Household no longer exists.',
+        );
+      }
+      return Household.fromFirestore(householdDoc);
+    } on FirebaseFunctionsException catch (error) {
+      final details = error.details;
       throw FirebaseException(
         plugin: 'cloud_firestore',
-        code: 'household-not-found',
-        message: 'Household no longer exists.',
+        code: details is Map && details['reason'] is String
+            ? details['reason'] as String
+            : error.code,
+        message:
+            error.message ?? 'Unable to join this household. Please retry.',
       );
     }
+  }
 
-    await _users.doc(userId).update({
-      'householdId': householdId,
-      'role': UserRole.familyMember.firestoreValue,
-      'updatedAt': FieldValue.serverTimestamp(),
+  Future<void> refreshHouseholdInvite(String householdId) async {
+    final householdRef = _households.doc(householdId);
+    final newCode = _generateInviteCode();
+    await _firestore.runTransaction((transaction) async {
+      final household = await transaction.get(householdRef);
+      if (!household.exists) throw StateError('Household no longer exists.');
+      final oldCode = household.data()!['inviteCode'] as String;
+      transaction.set(_inviteCodes.doc(newCode), {
+        'householdId': householdId,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      transaction.update(householdRef, {
+        'inviteCode': newCode,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      if (oldCode != newCode) transaction.delete(_inviteCodes.doc(oldCode));
     });
-
-    return Household.fromFirestore(householdDoc);
   }
 
   Future<void> leaveHousehold(String userId) async {
@@ -204,16 +236,20 @@ class FirestoreService {
   // ---------------------------------------------------------------------------
 
   CollectionReference<Map<String, dynamic>> _listsCollection(
-      String householdId) {
-    return _households.doc(householdId).collection(AppConstants.listsSubcollection);
+    String householdId,
+  ) {
+    return _households
+        .doc(householdId)
+        .collection(AppConstants.listsSubcollection);
   }
 
   Stream<List<GroceryList>> watchGroceryLists(String householdId) {
     return _listsCollection(householdId)
         .orderBy('createdAt', descending: false)
         .snapshots()
-        .map((snapshot) =>
-            snapshot.docs.map(GroceryList.fromFirestore).toList());
+        .map(
+          (snapshot) => snapshot.docs.map(GroceryList.fromFirestore).toList(),
+        );
   }
 
   Future<void> addGroceryList({
@@ -221,6 +257,9 @@ class FirestoreService {
     required String name,
     required String userId,
   }) async {
+    if (name.trim().isEmpty || name.trim().length > 120) {
+      throw ArgumentError('Enter a shopping list name of 1 to 120 characters.');
+    }
     final now = DateTime.now();
     await _listsCollection(householdId).add({
       'name': name.trim(),
@@ -243,19 +282,24 @@ class FirestoreService {
   // ---------------------------------------------------------------------------
 
   CollectionReference<Map<String, dynamic>> _itemsCollection(
-      String householdId, String listId) {
-    return _listsCollection(householdId)
-        .doc(listId)
-        .collection(AppConstants.itemsSubcollection);
+    String householdId,
+    String listId,
+  ) {
+    return _listsCollection(
+      householdId,
+    ).doc(listId).collection(AppConstants.itemsSubcollection);
   }
 
   Stream<List<GroceryItem>> watchGroceryItems(
-      String householdId, String listId) {
+    String householdId,
+    String listId,
+  ) {
     return _itemsCollection(householdId, listId)
         .orderBy('createdAt', descending: false)
         .snapshots()
-        .map((snapshot) =>
-            snapshot.docs.map(GroceryItem.fromFirestore).toList());
+        .map(
+          (snapshot) => snapshot.docs.map(GroceryItem.fromFirestore).toList(),
+        );
   }
 
   Future<void> addGroceryItem({
@@ -267,6 +311,7 @@ class FirestoreService {
     String category = 'Other',
     String unit = 'pcs',
     double price = 0.0,
+    String? imageUrl,
   }) async {
     final now = DateTime.now();
     await _itemsCollection(householdId, listId).add({
@@ -278,6 +323,7 @@ class FirestoreService {
       'category': category,
       'unit': unit,
       'price': price,
+      'imageUrl': imageUrl,
       'isDeal': false,
       'createdAt': Timestamp.fromDate(now),
       'updatedAt': Timestamp.fromDate(now),
@@ -296,6 +342,7 @@ class FirestoreService {
       'category': item.category,
       'unit': item.unit,
       'price': item.price,
+      'imageUrl': item.imageUrl,
       'isDeal': item.isDeal,
       'originalPrice': item.originalPrice,
       'store': item.store,
@@ -323,9 +370,10 @@ class FirestoreService {
   }
 
   Future<void> clearCheckedItems(String householdId, String listId) async {
-    final snapshot = await _itemsCollection(householdId, listId)
-        .where('isChecked', isEqualTo: true)
-        .get();
+    final snapshot = await _itemsCollection(
+      householdId,
+      listId,
+    ).where('isChecked', isEqualTo: true).get();
 
     final batch = _firestore.batch();
     for (final doc in snapshot.docs) {
@@ -346,16 +394,19 @@ class FirestoreService {
     // or just query a few recent items.
     return _firestore
         .collectionGroup(AppConstants.itemsSubcollection)
-        .where('householdId', isEqualTo: householdId) // We'd need to add this field to items for efficient group query
+        .where(
+          'householdId',
+          isEqualTo: householdId,
+        ) // We'd need to add this field to items for efficient group query
         .limit(50)
         .snapshots()
         .map((snapshot) {
-      final names = snapshot.docs
-          .map((doc) => doc.data()['name'] as String)
-          .toSet()
-          .toList();
-      names.sort();
-      return names;
-    });
+          final names = snapshot.docs
+              .map((doc) => doc.data()['name'] as String)
+              .toSet()
+              .toList();
+          names.sort();
+          return names;
+        });
   }
 }

@@ -1,0 +1,5 @@
+// Copy to Signing.local.xcconfig and replace both values before a release build.
+// Find the team ID in your Apple Developer account, not App Store Connect's app ID.
+DEVELOPMENT_TEAM = YOUR_APPLE_TEAM_ID
+// Use an iOS app registered in AdMob. This is not the banner ad unit ID.
+IOS_ADMOB_APP_ID = YOUR_IOS_ADMOB_APP_ID

@@ -8,48 +8,41 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:207784872626:android:095ebfd107b349e60f17ab",
-        "android_client_info": {
-          "package_name": "com.example.grocery_list_app"
-        }
-      },
-      "oauth_client": [
-        {
-          "client_id": "207784872626-sf8ipns41vgehgl25j6p5hikmg0mfqk7.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.example.grocery_list_app",
-            "certificate_hash": "11082ba29a363a84995f9af85468dff3456a8fde"
-          }
-        }
-      ],
-      "api_key": [
-        {
-          "current_key": "AIzaSyDzJxNfq-dqcuSPseWsTNA86Wv3MLbRtEs"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "207784872626-27fdrl4uah47eta0mens3sf5adbf406u.apps.googleusercontent.com",
-              "client_type": 2,
-              "ios_info": {
-                "bundle_id": "com.example.groceryListApp"
-              }
-            }
-          ]
-        }
-      }
-    },
-    {
-      "client_info": {
         "mobilesdk_app_id": "1:207784872626:android:30a56c8ab5d159420f17ab",
         "android_client_info": {
           "package_name": "com.ghandour.na2slna"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "207784872626-9bhl9heu5le0amo5ude622d34rm9ij73.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.ghandour.na2slna",
+            "certificate_hash": "6c5f457d92bd7d346390b289e6416ff194cf0006"
+          }
+        },
+        {
+          "client_id": "207784872626-gh1glv3dnb1nmvuv3q7i1l7obo5b2a1b.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.ghandour.na2slna",
+            "certificate_hash": "cef40b6886410d5d496bc5afceda64ee0c4e5287"
+          }
+        },
+        {
+          "client_id": "207784872626-rpu6d0cf2jhjhvalvoiollv0mhrtvume.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.ghandour.na2slna",
+            "certificate_hash": "11082ba29a363a84995f9af85468dff3456a8fde"
+          }
+        },
+        {
+          "client_id": "207784872626-2obhsqqd12586feccj1acdnalh9n4t6l.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyDzJxNfq-dqcuSPseWsTNA86Wv3MLbRtEs"
@@ -59,10 +52,14 @@
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "207784872626-27fdrl4uah47eta0mens3sf5adbf406u.apps.googleusercontent.com",
+              "client_id": "207784872626-2obhsqqd12586feccj1acdnalh9n4t6l.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "207784872626-pdh0lq5vajeb2lto2834ec98kdup76nb.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "com.example.groceryListApp"
+                "bundle_id": "com.ghandour.na2slna"
               }
             }
           ]

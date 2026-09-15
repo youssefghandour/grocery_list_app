@@ -1,1 +1,7 @@
 #include "Generated.xcconfig"
+#include "App.xcconfig"
+#include? "Signing.local.xcconfig"
+
+IOS_APS_ENVIRONMENT = development
+// Google's iOS sample app ID is used only for debug builds.
+IOS_ADMOB_APP_ID = ca-app-pub-3940256099942544~1458002511

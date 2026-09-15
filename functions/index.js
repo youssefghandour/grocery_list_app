@@ -1,4 +1,4 @@
-const {onCall, HttpsError} = require("firebase-functions/v2/https");
+const {onCall, HttpsError, onRequest} = require("firebase-functions/v2/https");
 const {onDocumentCreated} = require("firebase-functions/v2/firestore");
 const admin = require("firebase-admin");
 const axios = require("axios");
@@ -6,7 +6,10 @@ const axios = require("axios");
 admin.initializeApp();
 
 // Triggered when a new grocery item is added to ANY list in ANY household
-exports.onGroceryItemCreated = onDocumentCreated("households/{householdId}/lists/{listId}/items/{itemId}", async (event) => {
+exports.onGroceryItemCreated = onDocumentCreated({
+  document: "households/{householdId}/lists/{listId}/items/{itemId}",
+  region: "europe-west1",
+}, async (event) => {
   const snapshot = event.data;
   if (!snapshot) return;
 
@@ -31,7 +34,7 @@ exports.onGroceryItemCreated = onDocumentCreated("households/{householdId}/lists
           timeout: 6000,
         });
 
-        if (resp.data && resp.data.status === "success") {
+        if (resp.data && resp.data.status === 1 && resp.data.product) {
           const product = resp.data.product;
           const realName = product.product_name || product.generic_name || `Product ${itemName}`;
           const brand = product.brands ? `(${product.brands})` : "";
@@ -170,3 +173,6 @@ exports.searchProductDeals = onCall({
     throw new HttpsError("internal", "Deal search failed.");
   }
 });
+
+Object.assign(exports, require("./payments").createPaymentHandlers({onCall, onRequest, HttpsError, admin, axios}));
+exports.joinHousehold = require("./households").joinHousehold;

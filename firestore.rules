@@ -2,20 +2,192 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    // users: email/displayName/role strings, createdAt timestamp; optional profile
+    // settings, householdId, paid flags. Role/membership/paid changes are protected.
+    // households: name/inviteCode/createdBy strings, createdAt timestamp.
+    // lists: name/createdBy strings, isDefault bool, createdAt timestamp.
+    // items: householdId/name/quantity/addedBy strings, isChecked bool and timestamps;
+    // optional price/category/unit/photo/deal fields. Ownership and scope are immutable.
+    // inviteCodes: householdId string, createdAt timestamp. Server accepts invitations.
+    // All other collections, including payment orders/receipts, are server-only.
 
-    function isAuthenticated() {
-      return request.auth != null;
+    function signedIn() { return request.auth != null; }
+    function ownUser(uid) { return signedIn() && request.auth.uid == uid; }
+    function userPath(uid) { return /databases/$(database)/documents/users/$(uid); }
+    function householdPath(id) { return /databases/$(database)/documents/households/$(id); }
+    function member(id) {
+      return signedIn() && id is string && id.size() > 0
+        && get(userPath(request.auth.uid)).data.get('householdId', null) == id;
+    }
+    function memberAfter(id) {
+      return signedIn() && getAfter(userPath(request.auth.uid)).data.get('householdId', null) == id;
+    }
+    function owner(id) {
+      return member(id) && get(householdPath(id)).data.createdBy == request.auth.uid;
+    }
+    function text(value, maximum) {
+      return value is string && value.size() > 0 && value.size() <= maximum
+        && value.matches('.*[^\\s].*');
+    }
+    function optionalText(data, key, maximum) {
+      return data.get(key, null) == null
+        || (data[key] is string && data[key].size() <= maximum);
+    }
+    function optionalTimestamp(data, key) {
+      return !(key in data) || data[key] is timestamp;
+    }
+    function validDisplayName(value, allowUnchangedLegacy) {
+      // Old profiles may have blank names. Other edits can preserve that value,
+      // but clients cannot create a blank name or replace a valid name with one.
+      return text(value, 120) || (allowUnchangedLegacy
+        && value is string && value.size() <= 120 && value.matches('^\\s*$')
+        && value == resource.data.displayName);
+    }
+    function validUser(data, allowUnchangedLegacy) {
+      return data.keys().hasAll(['email', 'displayName', 'role', 'createdAt'])
+        && data.keys().hasOnly(['email', 'displayName', 'role', 'createdAt', 'updatedAt',
+          'imageUrl', 'householdId', 'fcmToken', 'notificationsEnabled', 'isPro', 'isGold'])
+        && data.email is string && data.email.size() <= 320
+        && validDisplayName(data.displayName, allowUnchangedLegacy)
+        && data.role in ['familyMember', 'familyAdmin']
+        && data.createdAt is timestamp && optionalTimestamp(data, 'updatedAt')
+        && optionalText(data, 'imageUrl', 4096) && optionalText(data, 'fcmToken', 4096)
+        && optionalText(data, 'householdId', 128)
+        && data.get('notificationsEnabled', true) is bool
+        && data.get('isPro', false) is bool && data.get('isGold', false) is bool;
+    }
+    function profileEdit() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+        .hasOnly(['displayName', 'imageUrl', 'fcmToken', 'notificationsEnabled', 'updatedAt']);
+    }
+    function membershipEditOnly() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+        .hasOnly(['householdId', 'role', 'updatedAt']);
+    }
+    function leavingHousehold() {
+      return membershipEditOnly() && request.resource.data.get('householdId', null) == null
+        && request.resource.data.role == 'familyMember';
+    }
+    function foundingHousehold() {
+      let id = request.resource.data.get('householdId', '');
+      return membershipEditOnly() && text(id, 128)
+        && request.resource.data.role == 'familyAdmin'
+        && !exists(householdPath(id))
+        && getAfter(householdPath(id)).data.createdBy == request.auth.uid;
     }
 
-    // This rule allows ANY authenticated user to read/write ANY collection.
-    // Use this to verify that the code is working, then we can restrict it.
-    match /{document=**} {
-      allow read, write: if isAuthenticated();
+    match /users/{uid} {
+      allow read: if ownUser(uid) || member(resource.data.get('householdId', null));
+      allow create: if ownUser(uid) && validUser(request.resource.data, false)
+        && request.resource.data.role == 'familyMember'
+        && request.resource.data.get('householdId', null) == null
+        && request.resource.data.get('isPro', false) == false
+        && request.resource.data.get('isGold', false) == false;
+      allow update: if validUser(request.resource.data, true)
+        && ((ownUser(uid) && (profileEdit() || leavingHousehold() || foundingHousehold()))
+          || (owner(resource.data.get('householdId', ''))
+            && uid != request.auth.uid && leavingHousehold()));
+      allow delete: if false;
     }
 
-    // Explicit support for your background search (Collection Group)
+    function validHousehold(data) {
+      return data.keys().hasAll(['name', 'inviteCode', 'createdBy', 'createdAt'])
+        && data.keys().hasOnly(['name', 'inviteCode', 'createdBy', 'createdAt', 'updatedAt'])
+        && text(data.name, 120) && text(data.createdBy, 128)
+        && data.inviteCode is string && data.inviteCode.matches('^[A-Z0-9]{6}$')
+        && data.createdAt is timestamp && optionalTimestamp(data, 'updatedAt');
+    }
+    function inviteMatches(id, code) {
+      return getAfter(/databases/$(database)/documents/inviteCodes/$(code)).data.householdId == id;
+    }
+    match /households/{householdId} {
+      allow read: if member(householdId);
+      allow create: if signedIn() && validHousehold(request.resource.data)
+        && request.resource.data.createdBy == request.auth.uid && memberAfter(householdId)
+        && request.resource.data.createdAt == request.time
+        && inviteMatches(householdId, request.resource.data.inviteCode);
+      allow update: if owner(householdId) && validHousehold(request.resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'inviteCode', 'updatedAt'])
+        && inviteMatches(householdId, request.resource.data.inviteCode);
+      allow delete: if false;
+
+      function validList(data) {
+        return data.keys().hasAll(['name', 'createdBy', 'createdAt', 'isDefault'])
+          && data.keys().hasOnly(['name', 'createdBy', 'createdAt', 'isDefault', 'updatedAt'])
+          && text(data.name, 120) && text(data.createdBy, 128)
+          && data.isDefault is bool && data.createdAt is timestamp
+          && optionalTimestamp(data, 'updatedAt');
+      }
+      match /lists/{listId} {
+        allow read: if member(householdId);
+        allow create: if signedIn() && memberAfter(householdId)
+          && existsAfter(householdPath(householdId)) && validList(request.resource.data)
+          && request.resource.data.createdBy == request.auth.uid;
+        allow update: if member(householdId) && validList(request.resource.data)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'updatedAt']);
+        allow delete: if member(householdId);
+
+        match /items/{itemId} {
+          allow read: if member(householdId);
+          allow create: if member(householdId) && validItem(request.resource.data, false)
+            && exists(/databases/$(database)/documents/households/$(householdId)/lists/$(listId))
+            && request.resource.data.householdId == householdId
+            && request.resource.data.addedBy == request.auth.uid;
+          allow update: if member(householdId) && validItem(request.resource.data, true)
+            && request.resource.data.get('householdId', householdId) == householdId
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'name', 'quantity', 'isChecked', 'category', 'unit', 'price', 'imageUrl',
+              'isDeal', 'originalPrice', 'store', 'updatedAt']);
+          allow delete: if member(householdId);
+        }
+      }
+    }
+
+    function validQuantity(value, allowUnchangedLegacy) {
+      // Preserve an existing bounded label (for example, "2 packs") so it can
+      // still be checked or edited. Every changed or new quantity must be numeric.
+      return value is string && value.size() <= 30
+        && ((value.matches('^[0-9]+([.][0-9]+)?$')
+          && float(value) > 0 && float(value) <= 1000000)
+          || (allowUnchangedLegacy && text(value, 30)
+            && value == resource.data.quantity));
+    }
+    function validItem(data, allowUnchangedLegacy) {
+      return data.keys().hasAll(['name', 'quantity', 'isChecked', 'addedBy', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['householdId', 'name', 'quantity', 'isChecked', 'addedBy',
+          'createdAt', 'updatedAt', 'category', 'unit', 'price', 'imageUrl', 'isDeal', 'originalPrice', 'store'])
+        && optionalText(data, 'householdId', 128)
+        && text(data.name, 200) && text(data.addedBy, 128)
+        && validQuantity(data.quantity, allowUnchangedLegacy)
+        && data.isChecked is bool && data.get('isDeal', false) is bool
+        && text(data.get('category', 'Other'), 120) && text(data.get('unit', 'pcs'), 30)
+        && data.get('price', 0) is number && data.get('price', 0) >= 0 && data.get('price', 0) <= 1000000000
+        && (data.get('originalPrice', null) == null
+          || (data.originalPrice is number && data.originalPrice >= 0 && data.originalPrice <= 1000000000))
+        && optionalText(data, 'store', 200) && optionalText(data, 'imageUrl', 4096)
+        && data.createdAt is timestamp && data.updatedAt is timestamp;
+    }
+
+    // Supports the app's collection-group query filtered by householdId.
+    // This grants no writes; nested item rules above enforce the actual path.
     match /{path=**}/items/{itemId} {
-      allow read, write: if isAuthenticated();
+      allow read: if member(resource.data.get('householdId', null));
+    }
+
+    function validInvite(data) {
+      return data.keys().hasAll(['householdId', 'createdAt'])
+        && data.keys().hasOnly(['householdId', 'createdAt'])
+        && text(data.householdId, 128) && data.createdAt is timestamp;
+    }
+    match /inviteCodes/{code} {
+      allow read: if member(resource.data.get('householdId', null));
+      allow create: if signedIn() && validInvite(request.resource.data)
+        && code.matches('^[A-Z0-9]{6}$')
+        && request.resource.data.createdAt == request.time
+        && getAfter(householdPath(request.resource.data.householdId)).data.createdBy == request.auth.uid
+        && getAfter(householdPath(request.resource.data.householdId)).data.inviteCode == code;
+      allow update: if false;
+      allow delete: if owner(resource.data.householdId);
     }
   }
 }

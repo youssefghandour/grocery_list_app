@@ -52,7 +52,7 @@ class HomeScreen extends ConsumerWidget {
                 backgroundColor: Theme.of(context).colorScheme.surface,
                 indicatorColor: Colors.green.withValues(alpha: 0.2),
                 selectedIndex: navigationIndex,
-                onDestinationSelected: (index) => ref.read(navigationIndexProvider.notifier).state = index,
+                onDestinationSelected: (index) => ref.read(navigationIndexProvider.notifier).setIndex(index),
                 destinations: const [
                   NavigationDestination(
                     icon: Icon(Icons.list_alt_outlined),

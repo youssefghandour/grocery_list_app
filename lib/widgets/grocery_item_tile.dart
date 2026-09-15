@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -60,6 +61,16 @@ class GroceryItemTile extends ConsumerWidget {
           ),
           child: Row(
             children: [
+              if (item.imageUrl != null)
+                Padding(
+                  padding: const EdgeInsets.only(right: 12),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: item.imageUrl!.startsWith('http')
+                        ? Image.network(item.imageUrl!, width: 40, height: 40, fit: BoxFit.cover)
+                        : Image.file(File(item.imageUrl!), width: 40, height: 40, fit: BoxFit.cover),
+                  ),
+                ),
               Checkbox(
                 value: item.isChecked,
                 onChanged: (_) => controller.toggleItem(item),

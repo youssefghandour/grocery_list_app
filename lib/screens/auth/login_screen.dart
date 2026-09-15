@@ -26,18 +26,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _signIn() async {
     if (!_formKey.currentState!.validate()) return;
 
-    await ref.read(authControllerProvider.notifier).signInWithEmail(
-          _emailController.text,
-          _passwordController.text,
-        );
+    await ref
+        .read(authControllerProvider.notifier)
+        .signInWithEmail(_emailController.text, _passwordController.text);
 
     if (!mounted) return;
 
     final error = ref.read(authControllerProvider).error;
     if (error != null && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString())),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.toString())));
     }
   }
 
@@ -50,16 +49,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (error != null && mounted) {
       String message = error.toString();
       if (message.contains('DEVELOPER_ERROR')) {
-        message = 'Google Sign-In failed. Please ensure you have added your SHA-1 fingerprint to the Firebase Console.';
+        message =
+            'Google Sign-In failed. Please ensure you have added your SHA-1 fingerprint to the Firebase Console.';
       }
+      debugPrint(message);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(message),
           duration: const Duration(seconds: 5),
-          action: SnackBarAction(
-            label: 'OK',
-            onPressed: () {},
-          ),
+          action: SnackBarAction(label: 'OK', onPressed: () {}),
         ),
       );
     }
@@ -81,15 +79,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 child: Column(
                   // crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Image.asset(
-                    "assets/na2slna.png"  ,
-                  width: 64,
-                    ),
+                    Image.asset("assets/na2slna.png", width: 64),
                     const SizedBox(height: 16),
                     Text(
                       'Na2slna',
                       textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      style: Theme.of(context).textTheme.headlineMedium
+                          ?.copyWith(
                             fontWeight: FontWeight.bold,
                             color: Theme.of(context).colorScheme.primary,
                           ),
@@ -99,8 +95,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       'Sign in to your shared household list',
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(context).colorScheme.outline,
-                          ),
+                        color: Theme.of(context).colorScheme.outline,
+                      ),
                     ),
                     const SizedBox(height: 32),
                     TextFormField(
@@ -130,8 +126,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 ? Icons.visibility_outlined
                                 : Icons.visibility_off_outlined,
                           ),
-                          onPressed: () =>
-                              setState(() => _obscurePassword = !_obscurePassword),
+                          onPressed: () => setState(
+                            () => _obscurePassword = !_obscurePassword,
+                          ),
                         ),
                       ),
                       obscureText: _obscurePassword,
@@ -173,8 +170,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       "Don't have a shared list yet?",
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context).colorScheme.outline,
-                          ),
+                        color: Theme.of(context).colorScheme.outline,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     FilledButton.tonalIcon(

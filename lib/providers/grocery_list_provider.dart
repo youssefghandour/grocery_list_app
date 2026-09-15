@@ -6,7 +6,7 @@ import '../providers/auth_provider.dart';
 
 /// Watch all grocery lists in the household.
 final groceryListsProvider = StreamProvider<List<GroceryList>>((ref) {
-  final appUser = ref.watch(appUserProvider).valueOrNull;
+  final appUser = ref.watch(appUserProvider).value;
   if (appUser == null || !appUser.hasHousehold) {
     return Stream.value([]);
   }
@@ -17,26 +17,39 @@ final groceryListsProvider = StreamProvider<List<GroceryList>>((ref) {
 });
 
 /// Tracks the manually selected list ID.
-final selectedListIdProvider = StateProvider<String?>((ref) => null);
+final selectedListIdProvider =
+    NotifierProvider<SelectedListIdNotifier, String?>(
+      SelectedListIdNotifier.new,
+    );
+
+class SelectedListIdNotifier extends Notifier<String?> {
+  @override
+  String? build() => null;
+  void set(String? id) => state = id;
+}
 
 /// Resolves the effective active list ID (selected or default).
 final activeListIdProvider = Provider<String?>((ref) {
   final selectedId = ref.watch(selectedListIdProvider);
-  if (selectedId != null) return selectedId;
-
-  final lists = ref.watch(groceryListsProvider).valueOrNull;
+  final listsState = ref.watch(groceryListsProvider);
+  // Do not reuse the previous household's lists while its replacement loads.
+  if (listsState.isLoading) return null;
+  final lists = listsState.value;
   if (lists == null || lists.isEmpty) return null;
+  if (lists.any((list) => list.id == selectedId)) return selectedId;
 
-  final defaultList =
-      lists.firstWhere((l) => l.isDefault, orElse: () => lists.first);
+  final defaultList = lists.firstWhere(
+    (l) => l.isDefault,
+    orElse: () => lists.first,
+  );
   return defaultList.id;
 });
 
 /// Real-time grocery items for the ACTIVE list.
 final groceryListProvider = StreamProvider<List<GroceryItem>>((ref) {
-  final appUser = ref.watch(appUserProvider).valueOrNull;
+  final appUser = ref.watch(appUserProvider).value;
   final listId = ref.watch(activeListIdProvider);
-  
+
   if (appUser == null || !appUser.hasHousehold || listId == null) {
     return Stream.value([]);
   }
@@ -48,7 +61,7 @@ final groceryListProvider = StreamProvider<List<GroceryItem>>((ref) {
 
 /// Smart suggestions based on previous items.
 final smartSuggestionsProvider = StreamProvider<List<String>>((ref) {
-  final appUser = ref.watch(appUserProvider).valueOrNull;
+  final appUser = ref.watch(appUserProvider).value;
   if (appUser == null || !appUser.hasHousehold) {
     return Stream.value([]);
   }
@@ -79,17 +92,15 @@ final itemMatchProvider = Provider.family<ProductMatch?, String>((ref, itemName)
 });
 */
 
-class GroceryListController extends StateNotifier<AsyncValue<void>> {
-  GroceryListController(this._ref) : super(const AsyncData(null));
+class GroceryListController extends Notifier<AsyncValue<void>> {
+  @override
+  AsyncValue<void> build() => const AsyncData(null);
 
-  final Ref _ref;
+  String? get _householdId => ref.read(appUserProvider).value?.householdId;
 
-  String? get _householdId =>
-      _ref.read(appUserProvider).valueOrNull?.householdId;
+  String? get _userId => ref.read(currentFirebaseUserProvider)?.uid;
 
-  String? get _userId => _ref.read(currentFirebaseUserProvider)?.uid;
-
-  String? get _activeListId => _ref.read(activeListIdProvider);
+  String? get _activeListId => ref.read(activeListIdProvider);
 
   Future<void> addList(String name) async {
     final householdId = _householdId;
@@ -98,11 +109,9 @@ class GroceryListController extends StateNotifier<AsyncValue<void>> {
 
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      await _ref.read(firestoreServiceProvider).addGroceryList(
-            householdId: householdId,
-            name: name,
-            userId: userId,
-          );
+      await ref
+          .read(firestoreServiceProvider)
+          .addGroceryList(householdId: householdId, name: name, userId: userId);
     });
   }
 
@@ -112,32 +121,50 @@ class GroceryListController extends StateNotifier<AsyncValue<void>> {
     String category = 'Other',
     String unit = 'pcs',
     double price = 0.0,
+    String? imageUrl,
   }) async {
     final householdId = _householdId;
     final userId = _userId;
-    if (householdId == null || userId == null) return;
+    if (householdId == null || userId == null) {
+      state = AsyncError(
+        StateError('Join a household before adding items.'),
+        StackTrace.current,
+      );
+      return;
+    }
 
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
+      if (!price.isFinite || price < 0) {
+        throw ArgumentError.value(
+          price,
+          'price',
+          'Must be a finite, non-negative number',
+        );
+      }
+      await ref.read(groceryListsProvider.future);
       String? listId = _activeListId;
 
       // If no list exists (e.g. for existing households), create a default one first
       if (listId == null) {
-        await _ref.read(firestoreServiceProvider).addGroceryList(
+        await ref
+            .read(firestoreServiceProvider)
+            .addGroceryList(
               householdId: householdId,
               name: 'Main List',
               userId: userId,
             );
-        final lists = await _ref.read(groceryListsProvider.future);
+        ref.invalidate(groceryListsProvider);
+        final lists = await ref.read(groceryListsProvider.future);
         if (lists.isNotEmpty) {
           listId = lists.first.id;
-          _ref.read(selectedListIdProvider.notifier).state = listId;
+          ref.read(selectedListIdProvider.notifier).set(listId);
         }
       }
 
       if (listId != null) {
         // Check if item already exists in the CURRENT list
-        final currentItems = _ref.read(groceryListProvider).valueOrNull ?? [];
+        final currentItems = await ref.read(groceryListProvider.future);
         final existingItem = currentItems.firstWhere(
           (item) => item.name.trim().toLowerCase() == name.trim().toLowerCase(),
           orElse: () => GroceryItem(
@@ -152,22 +179,36 @@ class GroceryListController extends StateNotifier<AsyncValue<void>> {
         );
 
         if (existingItem.id.isNotEmpty) {
-          // Increment quantity if it's a number, otherwise just update price/category if changed
-          int currentQty = int.tryParse(existingItem.quantity) ?? 1;
-          int addQty = int.tryParse(quantity) ?? 1;
-          
-          await _ref.read(firestoreServiceProvider).updateGroceryItem(
+          final currentQty = num.tryParse(existingItem.quantity);
+          final addQty = num.tryParse(quantity);
+          // Preserve descriptive quantities rather than silently replacing them.
+          final canAdd =
+              currentQty != null &&
+              currentQty.isFinite &&
+              addQty != null &&
+              addQty.isFinite;
+
+          await ref
+              .read(firestoreServiceProvider)
+              .updateGroceryItem(
                 householdId: householdId,
                 listId: listId,
                 item: existingItem.copyWith(
-                  quantity: (currentQty + addQty).toString(),
+                  quantity: canAdd
+                      ? (currentQty + addQty).toString()
+                      : existingItem.quantity,
                   price: price > 0 ? price : existingItem.price,
-                  category: category != 'Other' ? category : existingItem.category,
+                  category: category != 'Other'
+                      ? category
+                      : existingItem.category,
+                  imageUrl: imageUrl ?? existingItem.imageUrl,
                   updatedAt: DateTime.now(),
                 ),
               );
         } else {
-          await _ref.read(firestoreServiceProvider).addGroceryItem(
+          await ref
+              .read(firestoreServiceProvider)
+              .addGroceryItem(
                 householdId: householdId,
                 listId: listId,
                 name: name,
@@ -176,11 +217,9 @@ class GroceryListController extends StateNotifier<AsyncValue<void>> {
                 category: category,
                 unit: unit,
                 price: price,
+                imageUrl: imageUrl,
               );
         }
-        
-        // Trigger secret background search
-        // _ref.read(backgroundSearchServiceProvider).searchAndCache(name);
       }
     });
   }
@@ -188,11 +227,26 @@ class GroceryListController extends StateNotifier<AsyncValue<void>> {
   Future<void> updateItem(GroceryItem item) async {
     final householdId = _householdId;
     final listId = _activeListId;
-    if (householdId == null || listId == null) return;
+    if (householdId == null || listId == null) {
+      state = AsyncError(
+        StateError('Select a household list before saving.'),
+        StackTrace.current,
+      );
+      return;
+    }
 
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      await _ref.read(firestoreServiceProvider).updateGroceryItem(
+      if (!item.price.isFinite || item.price < 0) {
+        throw ArgumentError.value(
+          item.price,
+          'price',
+          'Must be a finite, non-negative number',
+        );
+      }
+      await ref
+          .read(firestoreServiceProvider)
+          .updateGroceryItem(
             householdId: householdId,
             listId: listId,
             item: item,
@@ -205,7 +259,9 @@ class GroceryListController extends StateNotifier<AsyncValue<void>> {
     final listId = _activeListId;
     if (householdId == null || listId == null) return;
 
-    await _ref.read(firestoreServiceProvider).toggleGroceryItem(
+    await ref
+        .read(firestoreServiceProvider)
+        .toggleGroceryItem(
           householdId: householdId,
           listId: listId,
           item: item,
@@ -219,7 +275,9 @@ class GroceryListController extends StateNotifier<AsyncValue<void>> {
 
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      await _ref.read(firestoreServiceProvider).deleteGroceryItem(
+      await ref
+          .read(firestoreServiceProvider)
+          .deleteGroceryItem(
             householdId: householdId,
             listId: listId,
             itemId: itemId,
@@ -234,7 +292,7 @@ class GroceryListController extends StateNotifier<AsyncValue<void>> {
 
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      await _ref
+      await ref
           .read(firestoreServiceProvider)
           .clearCheckedItems(householdId, listId);
     });
@@ -242,9 +300,9 @@ class GroceryListController extends StateNotifier<AsyncValue<void>> {
 }
 
 final groceryListControllerProvider =
-    StateNotifierProvider<GroceryListController, AsyncValue<void>>((ref) {
-  return GroceryListController(ref);
-});
+    NotifierProvider<GroceryListController, AsyncValue<void>>(
+      GroceryListController.new,
+    );
 
 /// Derived providers for UI convenience.
 final uncheckedItemsProvider = Provider<List<GroceryItem>>((ref) {

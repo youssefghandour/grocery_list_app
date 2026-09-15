@@ -1,0 +1,8 @@
+*.log
+window.xml
+screenshots/
+firestore.rules
+*.jsonl
+test-summary.json
+hub-*.json
+deployment/

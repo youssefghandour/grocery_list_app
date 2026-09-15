@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 class AuthService {
@@ -6,7 +7,7 @@ class AuthService {
     FirebaseAuth? auth,
     GoogleSignIn? googleSignIn,
   })  : _auth = auth ?? FirebaseAuth.instance,
-        _googleSignIn = googleSignIn ?? GoogleSignIn();
+        _googleSignIn = googleSignIn ?? GoogleSignIn.instance;
 
   final FirebaseAuth _auth;
   final GoogleSignIn _googleSignIn;
@@ -35,22 +36,22 @@ class AuthService {
     );
   }
 
-  Future<UserCredential> signInWithGoogle() async {
-    final googleUser = await _googleSignIn.signIn();
-    if (googleUser == null) {
-      throw FirebaseAuthException(
-        code: 'sign-in-aborted',
-        message: 'Google sign-in was cancelled.',
-      );
+  Future<UserCredential?> signInWithGoogle() async {
+    if (kIsWeb) {
+      // Use the standard Firebase Auth popup flow on Web
+      final GoogleAuthProvider googleProvider = GoogleAuthProvider();
+      return await _auth.signInWithPopup(googleProvider);
     }
 
-    final googleAuth = await googleUser.authentication;
+    // 1. Trigger the interactive sign-in sheet on native platforms
+    final googleUser = await _googleSignIn.authenticate();
+
+    final googleAuth = googleUser.authentication;
+
     final credential = GoogleAuthProvider.credential(
-      accessToken: googleAuth.accessToken,
       idToken: googleAuth.idToken,
     );
-
-    return _auth.signInWithCredential(credential);
+    return await _auth.signInWithCredential(credential);
   }
 
   Future<void> signOut() async {
