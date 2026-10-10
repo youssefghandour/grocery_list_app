@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'package:crypto/crypto.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -30,9 +32,15 @@ class PaymentException implements Exception {
 }
 
 class PaymentService {
-  PaymentService(this._ref);
+  PaymentService(
+    this._ref, {
+    InAppPurchase? store,
+    Future<dynamic> Function(String, Map<String, dynamic>)? callBackend,
+  }) : _iap = store ?? InAppPurchase.instance,
+       _callBackend = callBackend ?? _defaultBackendCall;
   final Ref _ref;
-  final InAppPurchase _iap = InAppPurchase.instance;
+  final InAppPurchase _iap;
+  final Future<dynamic> Function(String, Map<String, dynamic>) _callBackend;
   StreamSubscription<List<PurchaseDetails>>? _subscription;
   Future<void> _purchaseQueue = Future.value();
   bool _disposed = false;
@@ -41,8 +49,12 @@ class PaymentService {
   static const String goldId = 'na2slna_gold_lifetime';
   static const _unavailable =
       'Purchases are temporarily unavailable. Please try again later.';
-  FirebaseFunctions get _functions =>
-      FirebaseFunctions.instanceFor(region: 'us-central1');
+  static Future<dynamic> _defaultBackendCall(
+    String name,
+    Map<String, dynamic> data,
+  ) async => (await FirebaseFunctions.instanceFor(
+    region: 'us-central1',
+  ).httpsCallable(name).call(data)).data;
 
   void initialize() {
     if (kIsWeb || _subscription != null || _disposed) return;
@@ -73,10 +85,12 @@ class PaymentService {
       throw const PaymentException('Please sign in before purchasing.');
     }
     try {
-      final result = await _functions
-          .httpsCallable('getPaymentCapabilities')
-          .call();
-      if (result.data is! Map || result.data['nativeStore'] != true) {
+      final result = await _callBackend('getPaymentCapabilities', {
+        'source': defaultTargetPlatform == TargetPlatform.android
+            ? 'google_play'
+            : 'app_store',
+      });
+      if (result is! Map || result['nativeStore'] != true) {
         throw const PaymentException(_unavailable);
       }
     } on FirebaseFunctionsException {
@@ -107,7 +121,7 @@ class PaymentService {
     final started = await _iap.buyNonConsumable(
       purchaseParam: PurchaseParam(
         productDetails: product,
-        applicationUserName: uid,
+        applicationUserName: sha256.convert(utf8.encode(uid)).toString(),
       ),
     );
     if (!started) {
@@ -135,10 +149,9 @@ class PaymentService {
       throw const PaymentException('Choose a valid plan.');
     }
     try {
-      final result = await _functions.httpsCallable('createPaymobOrder').call({
+      final data = await _callBackend('createPaymobOrder', {
         'planType': planType,
       });
-      final data = result.data;
       if (data is! Map ||
           data['clientSecret'] is! String ||
           data['publicKey'] is! String) {
@@ -180,22 +193,21 @@ class PaymentService {
             ![proId, goldId].contains(purchase.productID)) {
           throw const PaymentException('Sign in to restore your purchase.');
         }
-        final result = await _functions
-            .httpsCallable('verifyStorePurchase')
-            .call({
-              'productId': purchase.productID,
-              'purchaseId': purchase.purchaseID,
-              'source': purchase.verificationData.source,
-              'verificationData':
-                  purchase.verificationData.serverVerificationData,
-            });
-        if (result.data is! Map || result.data['verified'] != true) {
+        final result = await _callBackend('verifyStorePurchase', {
+          'productId': purchase.productID,
+          'purchaseId': purchase.purchaseID,
+          'source': purchase.verificationData.source,
+          'verificationData': purchase.verificationData.serverVerificationData,
+        });
+        if (result is! Map || result['verified'] != true) {
           throw const PaymentException(
             'Your purchase could not be verified. Please try restoring it later.',
           );
         }
         // The server alone writes entitlements. Finish only a verified purchase.
-        if (purchase.pendingCompletePurchase) {
+        if (purchase.pendingCompletePurchase &&
+            !(purchase.verificationData.source == 'google_play' &&
+                result['acknowledged'] == true)) {
           await _iap.completePurchase(purchase);
         }
         _message('Your purchase is verified. Premium features are ready.');

@@ -2,6 +2,15 @@
 
 Live app: **https://na2slna.web.app**
 
+Latest payment audit, 16 September at 01:38 Cairo (15 September 22:38 UTC): both
+Google Play functions are ACTIVE with verification enabled, and reject
+unauthenticated requests. Play Console permissions and both product IDs were
+confirmed. An existing Pro receipt records successful server verification and
+acknowledgement at 18:03 UTC. Paymob remains disabled; its local refund edits have
+review findings and three failing existing tests. See
+[GOOGLE_PLAY.md](GOOGLE_PLAY.md) for the current payment implementation, tests and
+remaining setup. The deployment details below describe the earlier full-app release.
+
 Target: Firebase project `animemusic-e8c09`, Hosting site `na2slna`, Standard Firestore `(default)` in `eur3`. Other Hosting sites, Storage rules and Realtime Database rules were not deployed.
 
 ## Published components
@@ -9,7 +18,7 @@ Target: Firebase project `animemusic-e8c09`, Hosting site `na2slna`, Standard Fi
 - All seven Cloud Functions are ACTIVE on Node 22: `joinHousehold`, `getPaymentCapabilities`, `verifyStorePurchase`, `createPaymobOrder`, `paymobWebhook`, `searchProductDeals`, and `onGroceryItemCreated`.
 - The item-created trigger stays in its existing `europe-west1` region. Callable/payment endpoints use `us-central1`.
 - Firestore's active rules were read back and match the tested local source after normalizing line endings.
-- Added the production collection-group index on `items.householdId` used by shopping suggestions, preserving ordinary collection indexes.
+- Added the production collection-group index on `items.householdId` used by shopping suggestions, preserving ordinary collection indexes. All four indexes were confirmed READY at 2026-09-15 05:13:42 UTC / 08:13:42 Cairo.
 - Rebuilt and published the web app, including restored Android association data and corrected icon filenames.
 
 The backend completed first, followed by Firestore and Hosting. No production profiles, membership, items, payments, invitations or messages were created as test data.

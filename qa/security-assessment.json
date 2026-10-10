@@ -1,6 +1,6 @@
 {
   "score": 3,
-  "summary": "Moderate remaining privacy concern in the local Firestore rules: same-household reads expose whole user profiles, including email, notification preferences and messaging tokens. The original seven cross-household, entitlement, role and malformed-data failures are repaired. The expanded Auth/rules emulator suite passes 43/43 checks with positive collaboration, atomic creation, invitation refresh and bounded legacy compatibility. This assesses local code only; production rules were not deployed or audited in this repair pass.",
+  "summary": "Moderate remaining privacy concern in the Firestore rules: same-household reads expose whole user profiles, including email, notification preferences and messaging tokens. The original seven cross-household, entitlement, role and malformed-data failures are repaired. The expanded Auth/rules emulator suite passes 43/43 checks with positive collaboration, atomic creation, invitation refresh and bounded legacy compatibility. These rules were deployed on 15 September 2026 and the live source was read back and matched to the tested local source. The adversarial checks used local emulators; no production user data was changed for testing.",
   "findings": [
     {
       "check": "Field-Level vs. Identity-Level Security",

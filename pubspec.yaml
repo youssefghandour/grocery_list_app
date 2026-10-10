@@ -1,7 +1,7 @@
 name: na2slna
 description: Na2slna - collaborative grocery lists for Egypt.
 publish_to: 'none'
-version: 1.0.0+9
+version: 1.0.0+10
 
 environment:
   sdk: ^3.12.0
@@ -33,6 +33,7 @@ dependencies:
   app_links: ^7.2.1
   google_mobile_ads: ^9.1.0
   in_app_purchase: ^3.3.0
+  crypto: ^3.0.7
   image_picker: ^1.1.2
   path_provider: ^2.1.6
 #  paymob: ^1.2.0

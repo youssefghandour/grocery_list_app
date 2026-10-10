@@ -14,6 +14,10 @@ Before rollout, review existing documents for compatibility. Rules allow unchang
 
 ## Payments
 
+For the subsequent Google Play backend verification work and its current rollout
+status, see [GOOGLE_PLAY.md](GOOGLE_PLAY.md). The notes below describe the earlier
+15 September deployment; they do not establish the current Google Play setup.
+
 Native Android/iOS purchases are deliberately unavailable until a real server receipt verifier is implemented and tested for the actual store apps. `verifyStorePurchase` rejects unverified receipts, `getPaymentCapabilities` returns `nativeStore: false`, and the app checks that capability before initiating a purchase or restore. Do not enable purchasing merely by changing that flag. The server must validate product, app identity, transaction ownership and replay status before granting and completing a purchase.
 
 Paymob checkout is web-only. The callable creates a server-priced order tied to the authenticated UID; the webhook verifies HMAC-SHA512, checks the matching amount/currency/integration/order and atomically records the entitlement and processed transaction. Unsigned metadata cannot select the recipient. See [Paymob's official verification reference](https://github.com/PaymobAccept/Paymob-AI-Integration-Skill/blob/main/skills/paymob-integration/references/hmac-verification.md) and [Create Intention API](https://developers.paymob.com/paymob-docs/intention-apis/create-intention).

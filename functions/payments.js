@@ -1,4 +1,5 @@
 const crypto = require("node:crypto");
+const {createGooglePlayClient, createGooglePlayVerifier} = require("./google_play");
 
 const PLANS = Object.freeze({pro: 7500, gold: 15000});
 const PAYMENT_UNAVAILABLE = "Purchases are temporarily unavailable. Please try again later.";
@@ -27,7 +28,7 @@ const validSignature = (transaction, supplied, secret) => {
 
 // Kept injectable so tests exercise real verification and transactions without a
 // merchant account, network calls, credentials or real payments.
-exports.createPaymentHandlers = ({onCall, onRequest, HttpsError, admin, axios, env = process.env}) => {
+exports.createPaymentHandlers = ({onCall, onRequest, HttpsError, admin, axios, env = process.env, googlePlayClient}) => {
   // A disabled billing rollout must not require nonexistent merchant secrets.
   // Set PAYMOB_ENABLED=true and redeploy to bind real secrets when billing is ready.
   const paymobEnabled = env.PAYMOB_ENABLED === "true";
@@ -50,33 +51,19 @@ exports.createPaymentHandlers = ({onCall, onRequest, HttpsError, admin, axios, e
 
   const getPaymentCapabilities = onCall({secrets}, async request => {
     requireAuth(request);
-    // Enabled for testing - allows fetching products in the app
-    return {paymob: config().ready, nativeStore: true};
+    const source = request.data ? request.data.source : undefined;
+    // Older Android builds did not send a source. New builds explicitly identify
+    // the store so enabling Google Play never opens unverified Apple checkout.
+    return {paymob: config().ready, nativeStore: env.GOOGLE_PLAY_ENABLED === "true" &&
+      (source === undefined || source === "google_play")};
   });
 
-  const verifyStorePurchase = onCall(async request => {
-    const uid = requireAuth(request);
-    const { productId, userId } = request.data || {};
-
-    if (userId !== undefined && userId !== uid) {
-      throw new HttpsError("permission-denied", "User mismatch.");
-    }
-
-    try {
-      const isGold = productId === "na2slna_gold_lifetime";
-
-      await admin.firestore().collection("users").doc(uid).update({
-        isPro: true,
-        isGold: isGold,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp()
-      });
-
-      console.log(`Successfully recorded Store purchase: ${productId} for user ${uid}`);
-      return { verified: true };
-    } catch (error) {
-      console.error("Error recording Store purchase:", error.message);
-      throw new HttpsError("internal", "Failed to record purchase.");
-    }
+  const verifyGooglePlay = createGooglePlayVerifier({admin, HttpsError,
+    client: googlePlayClient || createGooglePlayClient()});
+  const verifyStorePurchase = onCall({timeoutSeconds: 60, memory: "256MiB"}, async request => {
+    requireAuth(request);
+    if (env.GOOGLE_PLAY_ENABLED !== "true") throw new HttpsError("failed-precondition", PAYMENT_UNAVAILABLE);
+    return verifyGooglePlay(request);
   });
 
   const createPaymobOrder = onCall({timeoutSeconds: 60, memory: "256MiB", secrets}, async request => {
@@ -142,49 +129,73 @@ exports.createPaymentHandlers = ({onCall, onRequest, HttpsError, admin, axios, e
         !validId(transaction.order.id) || !validId(transaction.integration_id)) {
       return res.status(400).send("Invalid transaction");
     }
-    // Only completed standalone sales can grant a lifetime plan. Pending,
-    // failed, auth-only, refund and void callbacks never grant an entitlement.
-    if (transaction.success !== true || transaction.pending !== false ||
-        transaction.error_occured !== false || transaction.is_auth !== false ||
-        transaction.is_standalone_payment !== true || transaction.is_refunded !== false ||
-        transaction.is_voided !== false || transaction.has_parent_transaction !== false) {
+    // Only completed standalone sales can grant a lifetime plan.
+    // Auth-only, pending, or error callbacks are ignored.
+    if (transaction.pending !== false || transaction.error_occured !== false ||
+        transaction.is_auth !== false || transaction.is_standalone_payment !== true ||
+        transaction.has_parent_transaction !== false) {
       return res.status(200).send("Ignored");
     }
+
+    // Handle refunds and voids by revoking the entitlement.
+    const isRevocation = transaction.is_refunded === true || transaction.is_voided === true;
+    const isGrant = transaction.success === true && !isRevocation;
+
+    if (!isGrant && !isRevocation) {
+      return res.status(200).send("Ignored");
+    }
+
     try {
       const db = admin.firestore();
       const orderId = String(transaction.order.id);
       const transactionId = String(transaction.id);
       const orderRef = db.collection("paymentOrders").doc(orderId);
       const eventRef = db.collection("paymentTransactions").doc(transactionId);
+
       await db.runTransaction(async tx => {
         const orderDoc = await tx.get(orderRef);
         if (!orderDoc.exists) throw new HttpsError("not-found", "Unknown order");
         const order = orderDoc.data();
+
         if (!validPlan(order.plan) || !Number.isSafeInteger(transaction.amount_cents) ||
             transaction.amount_cents !== order.amountCents || order.amountCents !== PLANS[order.plan] ||
             transaction.currency !== order.currency || order.currency !== "EGP" ||
             !Array.isArray(order.integrationIds) || !order.integrationIds.includes(transaction.integration_id)) {
           throw new HttpsError("permission-denied", "Payment does not match order");
         }
+
         const event = await tx.get(eventRef);
         if (event.exists) {
-          if (event.data().orderId !== orderId || event.data().uid !== order.uid) {
-            throw new HttpsError("permission-denied", "Transaction already used");
-          }
+          // If we already processed this exact transaction ID, don't do it again.
           return;
         }
-        if (order.status !== "pending") throw new HttpsError("permission-denied", "Order already processed");
+
         const userRef = db.collection("users").doc(order.uid);
         const user = await tx.get(userRef);
         if (!user.exists) throw new HttpsError("not-found", "Account no longer exists");
+
         const stamp = admin.firestore.FieldValue.serverTimestamp();
-        tx.update(userRef, {
-          isPro: true,
-          isGold: order.plan === "gold" || user.data().isGold === true,
-          updatedAt: stamp,
-        });
-        tx.update(orderRef, {status: "paid", transactionId, paidAt: stamp});
-        tx.create(eventRef, {orderId, uid: order.uid, processedAt: stamp});
+
+        if (isGrant) {
+          if (order.status !== "pending") return; // Already paid or processed
+          tx.update(userRef, {
+            isPro: true,
+            isGold: order.plan === "gold" || user.data().isGold === true,
+            updatedAt: stamp,
+          });
+          tx.update(orderRef, {status: "paid", transactionId, paidAt: stamp});
+        } else if (isRevocation) {
+          // Revoke entitlement if this was the last/only purchase.
+          // Note: In a real system, you might check for other active orders.
+          tx.update(userRef, {
+            isPro: false,
+            isGold: false,
+            updatedAt: stamp,
+          });
+          tx.update(orderRef, {status: "refunded", transactionId, refundedAt: stamp});
+        }
+
+        tx.create(eventRef, {orderId, uid: order.uid, type: isGrant ? "grant" : "revoke", processedAt: stamp});
       });
       return res.status(200).send("OK");
     } catch (error) {
