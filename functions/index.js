@@ -159,14 +159,9 @@ exports.searchProductDeals = onCall({
       console.log("Image discovery skip");
     }
 
-    const encodedName = encodeURIComponent(results.name);
-    const basePrice = 30.0 + (searchTerm.length * 6);
-
-    results.deals = [
-      { storeName: "Amazon Egypt", price: basePrice * 1.05, url: `https://www.amazon.eg/s?k=${encodedName}` },
-      { storeName: "Noon Egypt", price: basePrice * 0.98, url: `https://www.noon.com/egypt-en/search/?q=${encodedName}` },
-      { storeName: "Spinneys Egypt", price: basePrice * 0.92, url: `https://spinneys-egypt.com/en/products/search?q=${encodedName}` }
-    ];
+    // This legacy callable must not invent prices. Real Carrefour prices now
+    // come from the local Carrefour API integration in the app.
+    results.deals = [];
 
     return results;
   } catch (error) {
@@ -176,3 +171,4 @@ exports.searchProductDeals = onCall({
 
 Object.assign(exports, require("./payments").createPaymentHandlers({onCall, onRequest, HttpsError, admin, axios}));
 exports.joinHousehold = require("./households").joinHousehold;
+Object.assign(exports, require("./carrefour"));

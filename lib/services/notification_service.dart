@@ -59,12 +59,19 @@ class NotificationService {
             AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(channel);
 
+    // Set foreground notification options for iOS
+    await _messaging.setForegroundNotificationPresentationOptions(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+
     // Setup foreground message handling
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       RemoteNotification? notification = message.notification;
-      AndroidNotification? android = message.notification?.android;
 
-      if (notification != null && android != null) {
+      if (notification != null &&
+          defaultTargetPlatform == TargetPlatform.android) {
         _localNotifications.show(
           id: notification.hashCode,
           title: notification.title,
@@ -83,6 +90,12 @@ class NotificationService {
   }
 
   Future<String?> getToken() async {
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      final apnsToken = await _messaging.getAPNSToken();
+      if (apnsToken == null) {
+        debugPrint('APNs token is not available yet.');
+      }
+    }
     return await _messaging.getToken();
   }
 

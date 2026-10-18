@@ -55,6 +55,11 @@
 	<string>Choose photos to help your household identify grocery items.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Use the microphone when voice input is enabled for grocery item names.</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Turn spoken grocery item names into text when voice input is enabled.</string>
 	<key>UIBackgroundModes</key>

@@ -96,9 +96,45 @@ class AuthController extends Notifier<AsyncValue<void>> {
     });
   }
 
+  Future<void> signInWithApple() async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      final credential = await _auth.signInWithApple();
+      final user = credential?.user;
+
+      if (user == null) return;
+
+      final existing = await _firestore.getUser(user.uid);
+      if (existing == null) {
+        final displayName = user.displayName ??
+            (user.email != null && user.email!.isNotEmpty
+                ? user.email!.split('@').first
+                : 'User');
+        await _firestore.createUserProfile(
+          uid: user.uid,
+          email: user.email ?? '',
+          displayName: displayName,
+          imageUrl: user.photoURL,
+        );
+      }
+    });
+  }
+
   Future<void> signOut() async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(_auth.signOut);
+  }
+
+  Future<void> deleteAccount() async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      final user = _auth.currentUser;
+      if (user != null) {
+        final uid = user.uid;
+        await _firestore.deleteUserProfile(uid);
+        await _auth.deleteAccount();
+      }
+    });
   }
 
   Future<void> resetPassword(String email) async {

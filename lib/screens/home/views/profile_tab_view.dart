@@ -23,6 +23,47 @@ class ProfileTabView extends ConsumerWidget {
     }
   }
 
+  Future<void> _confirmDeleteAccount(
+      BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Account'),
+        content: const Text(
+          'Are you sure you want to delete your account? '
+          'This will permanently delete your profile and remove you from your household list. '
+          'This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && context.mounted) {
+      await ref.read(authControllerProvider.notifier).deleteAccount();
+      final error = ref.read(authControllerProvider).error;
+      if (error != null && context.mounted) {
+        String message = error.toString();
+        if (message.contains('requires-recent-login')) {
+          message =
+              'For security, please log out and sign in again before deleting your account.';
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+      }
+    }
+  }
+
   void _showEditNameDialog(BuildContext context, WidgetRef ref) {
     final controller = TextEditingController(text: appUser.displayName);
     showDialog(
@@ -571,21 +612,39 @@ class ProfileTabView extends ConsumerWidget {
               const SizedBox(height: 24),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: OutlinedButton(
-                  onPressed: () =>
-                      ref.read(authControllerProvider.notifier).signOut(),
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 50),
-                    foregroundColor: Colors.red,
-                    side: const BorderSide(color: Colors.red, width: 1.5),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                child: Column(
+                  children: [
+                    OutlinedButton(
+                      onPressed: () =>
+                          ref.read(authControllerProvider.notifier).signOut(),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 50),
+                        foregroundColor: Colors.red,
+                        side: const BorderSide(color: Colors.red, width: 1.5),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        'Log Out',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
                     ),
-                  ),
-                  child: const Text(
-                    'Log Out',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
+                    const SizedBox(height: 12),
+                    TextButton(
+                      onPressed: () => _confirmDeleteAccount(context, ref),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.red.shade700,
+                      ),
+                      child: const Text(
+                        'Delete Account',
+                        style: TextStyle(
+                          fontSize: 13,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 100),

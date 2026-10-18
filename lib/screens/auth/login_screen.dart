@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -63,9 +64,43 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
+  Future<void> _signInWithApple() async {
+    await ref.read(authControllerProvider.notifier).signInWithApple();
+
+    if (!mounted) return;
+
+    final error = ref.read(authControllerProvider).error;
+    if (error != null && mounted) {
+      String message = error.toString();
+      // Handle user cancellation gracefully without showing an error banner
+      if (message.contains('1001') ||
+          message.contains('canceled') ||
+          message.contains('cancelled')) {
+        return;
+      }
+      if (message.contains('1000') ||
+          message.contains('AuthorizationError')) {
+        message =
+            'Sign in with Apple failed. Please ensure Sign in with Apple is enabled in your device settings and Apple Developer account.';
+      }
+      debugPrint(message);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          duration: const Duration(seconds: 5),
+          action: SnackBarAction(label: 'OK', onPressed: () {}),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isLoading = ref.watch(authControllerProvider).isLoading;
+    final showAppleSignIn =
+        defaultTargetPlatform == TargetPlatform.iOS ||
+        defaultTargetPlatform == TargetPlatform.macOS ||
+        kIsWeb;
 
     return Scaffold(
       body: SafeArea(
@@ -156,6 +191,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       icon: const Icon(Icons.g_mobiledata, size: 28),
                       label: const Text('Continue with Google'),
                     ),
+                    if (showAppleSignIn) ...[
+                      const SizedBox(height: 12),
+                      OutlinedButton.icon(
+                        onPressed: isLoading ? null : _signInWithApple,
+                        icon: const Icon(Icons.apple, size: 22),
+                        label: const Text('Continue with Apple'),
+                      ),
+                    ],
                     const SizedBox(height: 16),
                     TextButton(
                       onPressed: isLoading

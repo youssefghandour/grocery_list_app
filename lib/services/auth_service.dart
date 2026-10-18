@@ -54,11 +54,29 @@ class AuthService {
     return await _auth.signInWithCredential(credential);
   }
 
+  Future<UserCredential?> signInWithApple() async {
+    final appleProvider = AppleAuthProvider();
+    appleProvider.addScope('email');
+    appleProvider.addScope('name');
+
+    if (kIsWeb) {
+      return await _auth.signInWithPopup(appleProvider);
+    }
+    return await _auth.signInWithProvider(appleProvider);
+  }
+
   Future<void> signOut() async {
     await Future.wait([
       _auth.signOut(),
       _googleSignIn.signOut(),
     ]);
+  }
+
+  Future<void> deleteAccount() async {
+    final user = _auth.currentUser;
+    if (user != null) {
+      await user.delete();
+    }
   }
 
   Future<void> sendPasswordResetEmail(String email) {

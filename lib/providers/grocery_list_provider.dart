@@ -1,8 +1,18 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/grocery_item_model.dart';
 import '../models/grocery_list_model.dart';
+import '../models/recurring_list_template_model.dart';
 import '../providers/auth_provider.dart';
+import '../services/carrefour_api_service.dart';
+
+final carrefourApiServiceProvider = Provider<CarrefourApiService>((ref) {
+  final service = CarrefourApiService();
+  ref.onDispose(service.close);
+  return service;
+});
 
 /// Watch all grocery lists in the household.
 final groceryListsProvider = StreamProvider<List<GroceryList>>((ref) {
@@ -15,6 +25,18 @@ final groceryListsProvider = StreamProvider<List<GroceryList>>((ref) {
       .watch(firestoreServiceProvider)
       .watchGroceryLists(appUser.householdId!);
 });
+
+/// Saved household lists that can be added to the active list again.
+final recurringListTemplatesProvider =
+    StreamProvider<List<RecurringListTemplate>>((ref) {
+      final appUser = ref.watch(appUserProvider).value;
+      if (appUser == null || !appUser.hasHousehold) {
+        return Stream.value([]);
+      }
+      return ref
+          .watch(firestoreServiceProvider)
+          .watchRecurringListTemplates(appUser.householdId!);
+    });
 
 /// Tracks the manually selected list ID.
 final selectedListIdProvider =
@@ -93,6 +115,8 @@ final itemMatchProvider = Provider.family<ProductMatch?, String>((ref, itemName)
 */
 
 class GroceryListController extends Notifier<AsyncValue<void>> {
+  final Set<String> _automaticPriceLookups = {};
+
   @override
   AsyncValue<void> build() => const AsyncData(null);
 
@@ -101,6 +125,175 @@ class GroceryListController extends Notifier<AsyncValue<void>> {
   String? get _userId => ref.read(currentFirebaseUserProvider)?.uid;
 
   String? get _activeListId => ref.read(activeListIdProvider);
+
+  /// Looks up prices for unpriced items once per item/name in the active list.
+  /// Existing user-entered prices are deliberately left untouched.
+  void autoPriceMissingItems(List<GroceryItem> items) {
+    final householdId = _householdId;
+    final listId = _activeListId;
+    if (householdId == null || listId == null) return;
+
+    for (final item in items) {
+      final isCarrefourEstimate = item.store == 'Carrefour';
+      if (item.id.isEmpty ||
+          (item.price > 0 && !isCarrefourEstimate) ||
+          item.name.trim().isEmpty) {
+        continue;
+      }
+
+      final key =
+          '$householdId/$listId/${item.id}/${item.name.trim().toLowerCase()}';
+      if (!_automaticPriceLookups.add(key)) continue;
+      unawaited(_lookupAndSaveCarrefourPrice(item, householdId, listId));
+    }
+  }
+
+  Future<void> _lookupAndSaveCarrefourPrice(
+    GroceryItem item,
+    String householdId,
+    String listId,
+  ) async {
+    try {
+      final firestore = ref.read(firestoreServiceProvider);
+      final carrefour = ref.read(carrefourApiServiceProvider);
+      final preference = await firestore.getCarrefourProductPreference(
+        householdId: householdId,
+        itemName: item.name,
+        unit: item.unit,
+      );
+      final price = preference == null
+          ? await carrefour.estimateUnitPrice(
+              itemName: item.name,
+              unit: item.unit,
+            )
+          : await _priceForPreferredProduct(
+              carrefour,
+              item,
+              preference['productId']?.toString() ?? '',
+            );
+
+      // The user may have switched lists, edited the name, or entered a price
+      // while the network request was running. Only update the same item and
+      // preserve any price that did not come from this automatic lookup.
+      if (_householdId != householdId || _activeListId != listId) return;
+      final currentItems = await ref.read(groceryListProvider.future);
+      if (_householdId != householdId || _activeListId != listId) return;
+      GroceryItem? current;
+      for (final candidate in currentItems) {
+        if (candidate.id == item.id) {
+          current = candidate;
+          break;
+        }
+      }
+      if (current == null ||
+          current.name.trim().toLowerCase() != item.name.trim().toLowerCase()) {
+        return;
+      }
+
+      if (price == null || !price.isFinite || price <= 0) {
+        if (current.store != 'Carrefour') return;
+        await ref
+            .read(firestoreServiceProvider)
+            .updateGroceryItem(
+              householdId: householdId,
+              listId: listId,
+              item: current.copyWith(
+                price: 0,
+                clearStore: true,
+                updatedAt: DateTime.now(),
+              ),
+            );
+        return;
+      }
+      if (current.price > 0 && current.store != 'Carrefour') return;
+
+      await ref
+          .read(firestoreServiceProvider)
+          .updateGroceryItem(
+            householdId: householdId,
+            listId: listId,
+            item: current.copyWith(
+              price: price,
+              store: 'Carrefour',
+              updatedAt: DateTime.now(),
+            ),
+          );
+    } catch (_) {
+      // Keep the list usable if the local API is offline; the existing manual
+      // Carrefour search remains available as a fallback.
+    }
+  }
+
+  Future<double?> _priceForPreferredProduct(
+    CarrefourApiService carrefour,
+    GroceryItem item,
+    String productId,
+  ) async {
+    final product = await carrefour.findProductById(
+      query: item.name,
+      productId: productId,
+    );
+    return product == null ? null : carrefour.priceForUnit(product, item.unit);
+  }
+
+  Future<void> selectCarrefourProduct(
+    GroceryItem item,
+    CarrefourProduct product,
+  ) async {
+    final householdId = _householdId;
+    final listId = _activeListId;
+    final userId = _userId;
+    if (householdId == null || listId == null || userId == null) {
+      throw StateError('Select a household list before choosing a product.');
+    }
+    if (product.id.isEmpty) {
+      throw StateError('This Carrefour product cannot be saved for later.');
+    }
+    final price = ref
+        .read(carrefourApiServiceProvider)
+        .priceForUnit(product, item.unit);
+    if (price == null || !price.isFinite || price <= 0) {
+      throw StateError('This product has no usable price for ${item.unit}.');
+    }
+
+    final currentItems = await ref.read(groceryListProvider.future);
+    if (_householdId != householdId || _activeListId != listId) {
+      throw StateError(
+        'The active list changed. Please choose the product again.',
+      );
+    }
+    GroceryItem? current;
+    for (final candidate in currentItems) {
+      if (candidate.id == item.id) {
+        current = candidate;
+        break;
+      }
+    }
+    if (current == null ||
+        current.name.trim().toLowerCase() != item.name.trim().toLowerCase() ||
+        current.unit.trim().toLowerCase() != item.unit.trim().toLowerCase()) {
+      throw StateError(
+        'This list item changed. Please choose the product again.',
+      );
+    }
+
+    await ref
+        .read(firestoreServiceProvider)
+        .applyCarrefourProductSelection(
+          householdId: householdId,
+          listId: listId,
+          item: current.copyWith(
+            price: price,
+            store: 'Carrefour',
+            updatedAt: DateTime.now(),
+          ),
+          selectedBy: userId,
+          productId: product.id,
+          productName: product.name,
+          brand: product.brand,
+          url: product.url,
+        );
+  }
 
   Future<void> addList(String name) async {
     final householdId = _householdId;
@@ -112,6 +305,60 @@ class GroceryListController extends Notifier<AsyncValue<void>> {
       await ref
           .read(firestoreServiceProvider)
           .addGroceryList(householdId: householdId, name: name, userId: userId);
+    });
+  }
+
+  Future<void> saveRecurringTemplate({
+    required String name,
+    required List<GroceryItem> items,
+  }) async {
+    final householdId = _householdId;
+    final userId = _userId;
+    if (householdId == null || userId == null) return;
+
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      await ref
+          .read(firestoreServiceProvider)
+          .saveRecurringListTemplate(
+            householdId: householdId,
+            name: name,
+            userId: userId,
+            items: items,
+          );
+    });
+  }
+
+  Future<void> addRecurringTemplate(RecurringListTemplate template) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      for (final item in template.items) {
+        await addItem(
+          name: item.name,
+          quantity: item.quantity,
+          category: item.category,
+          unit: item.unit,
+          price: item.price,
+          imageUrl: item.imageUrl,
+        );
+        if (state.hasError) {
+          throw state.error!;
+        }
+      }
+    });
+  }
+
+  Future<void> deleteRecurringTemplate(String templateId) async {
+    final householdId = _householdId;
+    if (householdId == null) return;
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      await ref
+          .read(firestoreServiceProvider)
+          .deleteRecurringListTemplate(
+            householdId: householdId,
+            templateId: templateId,
+          );
     });
   }
 

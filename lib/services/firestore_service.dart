@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -8,6 +9,7 @@ import '../constants/user_roles.dart';
 import '../models/grocery_item_model.dart';
 import '../models/grocery_list_model.dart';
 import '../models/household_model.dart';
+import '../models/recurring_list_template_model.dart';
 import '../models/user_model.dart';
 
 class FirestoreService {
@@ -81,6 +83,10 @@ class FirestoreService {
       'notificationsEnabled': enabled,
       'updatedAt': FieldValue.serverTimestamp(),
     });
+  }
+
+  Future<void> deleteUserProfile(String uid) async {
+    await _users.doc(uid).delete();
   }
 
   Stream<List<AppUser>> watchHouseholdMembers(String householdId) {
@@ -269,6 +275,69 @@ class FirestoreService {
     });
   }
 
+  CollectionReference<Map<String, dynamic>> _templatesCollection(
+    String householdId,
+  ) {
+    return _households.doc(householdId).collection('listTemplates');
+  }
+
+  Stream<List<RecurringListTemplate>> watchRecurringListTemplates(
+    String householdId,
+  ) {
+    return _templatesCollection(householdId)
+        .orderBy('createdAt', descending: false)
+        .snapshots()
+        .map(
+          (snapshot) =>
+              snapshot.docs.map(RecurringListTemplate.fromFirestore).toList(),
+        );
+  }
+
+  Future<void> saveRecurringListTemplate({
+    required String householdId,
+    required String name,
+    required String userId,
+    required List<GroceryItem> items,
+  }) async {
+    if (name.trim().isEmpty || name.trim().length > 120) {
+      throw ArgumentError('Enter a saved list name of 1 to 120 characters.');
+    }
+    if (items.isEmpty || items.length > 100) {
+      throw ArgumentError('A saved list must contain 1 to 100 items.');
+    }
+
+    final template = RecurringListTemplate(
+      id: '',
+      name: name.trim(),
+      items: items
+          .where((item) => !item.isChecked)
+          .map(
+            (item) => RecurringListTemplateItem(
+              name: item.name,
+              quantity: item.quantity,
+              category: item.category,
+              unit: item.unit,
+              price: item.price,
+              imageUrl: item.imageUrl,
+            ),
+          )
+          .toList(),
+      createdBy: userId,
+      createdAt: DateTime.now(),
+    );
+    if (template.items.isEmpty) {
+      throw ArgumentError('Add at least one unchecked item to save this list.');
+    }
+    await _templatesCollection(householdId).add(template.toFirestore());
+  }
+
+  Future<void> deleteRecurringListTemplate({
+    required String householdId,
+    required String templateId,
+  }) async {
+    await _templatesCollection(householdId).doc(templateId).delete();
+  }
+
   Future<void> deleteGroceryList({
     required String householdId,
     required String listId,
@@ -349,6 +418,72 @@ class FirestoreService {
       'updatedAt': FieldValue.serverTimestamp(),
     });
   }
+
+  Future<Map<String, dynamic>?> getCarrefourProductPreference({
+    required String householdId,
+    required String itemName,
+    required String unit,
+  }) async {
+    final preferenceId = _carrefourPreferenceId(itemName, unit);
+    final snapshot = await _households
+        .doc(householdId)
+        .collection('carrefourProductPreferences')
+        .doc(preferenceId)
+        .get();
+    return snapshot.data();
+  }
+
+  Future<void> applyCarrefourProductSelection({
+    required String householdId,
+    required String listId,
+    required GroceryItem item,
+    required String selectedBy,
+    required String productId,
+    required String productName,
+    String? brand,
+    String? url,
+  }) async {
+    final normalizedName = item.name.trim().toLowerCase();
+    final normalizedUnit = item.unit.trim().toLowerCase();
+    final preferenceRef = _households
+        .doc(householdId)
+        .collection('carrefourProductPreferences')
+        .doc(_carrefourPreferenceId(item.name, item.unit));
+    final itemRef = _itemsCollection(householdId, listId).doc(item.id);
+    final batch = _firestore.batch();
+
+    batch.update(itemRef, {
+      'name': item.name.trim(),
+      'quantity': item.quantity.trim(),
+      'isChecked': item.isChecked,
+      'category': item.category,
+      'unit': item.unit,
+      'price': item.price,
+      'imageUrl': item.imageUrl,
+      'isDeal': item.isDeal,
+      'originalPrice': item.originalPrice,
+      'store': 'Carrefour',
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+    batch.set(preferenceRef, {
+      'itemName': normalizedName,
+      'unit': normalizedUnit,
+      'productId': productId,
+      'productName': productName,
+      'brand': brand,
+      'url': url,
+      'updatedBy': selectedBy,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+    await batch.commit();
+  }
+
+  String _carrefourPreferenceId(String itemName, String unit) =>
+      base64Url.encode(
+        utf8.encode(
+          '${itemName.trim().toLowerCase()}|${unit.trim().toLowerCase()}',
+        ),
+      );
 
   Future<void> toggleGroceryItem({
     required String householdId,

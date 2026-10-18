@@ -90,6 +90,14 @@ class ListTabView extends ConsumerWidget {
                 onRetry: () => ref.invalidate(groceryListProvider),
               ),
               data: (items) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (context.mounted) {
+                    ref
+                        .read(groceryListControllerProvider.notifier)
+                        .autoPriceMissingItems(items);
+                  }
+                });
+
                 final Map<String, List<GroceryItem>> grouped = {};
                 for (var item in items) {
                   grouped.putIfAbsent(item.category, () => []).add(item);
@@ -183,6 +191,26 @@ class ListTabView extends ConsumerWidget {
               },
             ),
           const Divider(),
+          ListTile(
+            leading: const Icon(Icons.playlist_add, color: Colors.green),
+            title: const Text('Add a saved list'),
+            subtitle: const Text('Add a weekly list to this list'),
+            onTap: () {
+              Navigator.pop(context);
+              _showRecurringTemplates(context, ref);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.bookmark_add_outlined),
+            title: const Text('Save current list'),
+            subtitle: const Text('Reuse these items next time'),
+            enabled: items.any((item) => !item.isChecked),
+            onTap: () {
+              Navigator.pop(context);
+              _showSaveTemplateDialog(context, items, activeListName);
+            },
+          ),
+          const Divider(),
           const Padding(
             padding: EdgeInsets.all(16),
             child: Text(
@@ -219,6 +247,203 @@ class ListTabView extends ConsumerWidget {
 
   void _showCreateListDialog(BuildContext context, WidgetRef ref) {
     showDialog(context: context, builder: (ctx) => const _CreateListDialog());
+  }
+
+  void _showSaveTemplateDialog(
+    BuildContext context,
+    List<GroceryItem> items,
+    String activeListName,
+  ) {
+    showDialog<void>(
+      context: context,
+      builder: (_) => _SaveRecurringListDialog(
+        initialName: activeListName == 'My List'
+            ? 'Weekly Groceries'
+            : activeListName,
+        items: items,
+      ),
+    );
+  }
+
+  void _showRecurringTemplates(BuildContext context, WidgetRef ref) {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Consumer(
+          builder: (context, ref, _) {
+            final templatesAsync = ref.watch(recurringListTemplatesProvider);
+            return templatesAsync.when(
+              loading: () => const Padding(
+                padding: EdgeInsets.all(32),
+                child: Center(child: CircularProgressIndicator()),
+              ),
+              error: (_, _) => const Padding(
+                padding: EdgeInsets.all(24),
+                child: Text('Could not load saved lists. Please try again.'),
+              ),
+              data: (templates) {
+                if (templates.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Text(
+                      'No saved lists yet. Save your current list to reuse it.',
+                    ),
+                  );
+                }
+                return ListView(
+                  shrinkWrap: true,
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.fromLTRB(16, 20, 16, 8),
+                      child: Text(
+                        'Saved lists',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                        ),
+                      ),
+                    ),
+                    ...templates.map(
+                      (template) => ListTile(
+                        leading: const Icon(Icons.playlist_add_check),
+                        title: Text(template.name),
+                        subtitle: Text('${template.items.length} items'),
+                        trailing: const Icon(Icons.add_circle_outline),
+                        onTap: () async {
+                          await ref
+                              .read(groceryListControllerProvider.notifier)
+                              .addRecurringTemplate(template);
+                          if (!context.mounted) return;
+                          final result = ref.read(
+                            groceryListControllerProvider,
+                          );
+                          if (result.hasError) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Could not add the saved list. Please try again.',
+                                ),
+                              ),
+                            );
+                            return;
+                          }
+                          final messenger = ScaffoldMessenger.of(context);
+                          Navigator.pop(sheetContext);
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                '${template.name} added to your list',
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                );
+              },
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _SaveRecurringListDialog extends ConsumerStatefulWidget {
+  const _SaveRecurringListDialog({
+    required this.initialName,
+    required this.items,
+  });
+
+  final String initialName;
+  final List<GroceryItem> items;
+
+  @override
+  ConsumerState<_SaveRecurringListDialog> createState() =>
+      _SaveRecurringListDialogState();
+}
+
+class _SaveRecurringListDialogState
+    extends ConsumerState<_SaveRecurringListDialog> {
+  late final TextEditingController _controller;
+  bool _saving = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialName);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final name = _controller.text.trim();
+    if (_saving || name.isEmpty) {
+      setState(() => _error = 'Enter a name for this saved list.');
+      return;
+    }
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    await ref
+        .read(groceryListControllerProvider.notifier)
+        .saveRecurringTemplate(name: name, items: widget.items);
+    if (!mounted) return;
+    if (ref.read(groceryListControllerProvider).hasError) {
+      setState(() {
+        _saving = false;
+        _error = 'Could not save this list. Please try again.';
+      });
+      return;
+    }
+    ref.invalidate(recurringListTemplatesProvider);
+    final messenger = ScaffoldMessenger.of(context);
+    Navigator.pop(context);
+    messenger.showSnackBar(
+      SnackBar(content: Text('$name saved for next time')),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Save this list'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: _controller,
+            autofocus: true,
+            maxLength: 120,
+            enabled: !_saving,
+            decoration: const InputDecoration(labelText: 'List name'),
+            onSubmitted: (_) => _save(),
+          ),
+          if (_error != null)
+            Text(
+              _error!,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: _saving ? null : () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: _saving ? null : _save,
+          child: Text(_saving ? 'Saving...' : 'Save list'),
+        ),
+      ],
+    );
   }
 }
 

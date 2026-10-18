@@ -118,6 +118,41 @@ service cloud.firestore {
           && data.isDefault is bool && data.createdAt is timestamp
           && optionalTimestamp(data, 'updatedAt');
       }
+      function validListTemplate(data) {
+        return data.keys().hasAll(['name', 'items', 'createdBy', 'createdAt'])
+          && data.keys().hasOnly(['name', 'items', 'createdBy', 'createdAt'])
+          && text(data.name, 120) && data.createdBy == request.auth.uid
+          && data.items is list && data.items.size() > 0 && data.items.size() <= 100
+          && data.createdAt is timestamp;
+      }
+      match /listTemplates/{templateId} {
+        allow read: if member(householdId);
+        allow create: if member(householdId)
+          && validListTemplate(request.resource.data);
+        allow update: if false;
+        allow delete: if member(householdId);
+      }
+      match /carrefourProductPreferences/{preferenceId} {
+        allow read: if member(householdId);
+        allow create, update: if member(householdId)
+          && request.resource.data.keys().hasAll([
+            'itemName', 'unit', 'productId', 'productName', 'brand', 'url',
+            'updatedBy', 'updatedAt'
+          ])
+          && request.resource.data.keys().hasOnly([
+            'itemName', 'unit', 'productId', 'productName', 'brand', 'url',
+            'updatedBy', 'updatedAt'
+          ])
+          && text(request.resource.data.itemName, 120)
+          && text(request.resource.data.unit, 20)
+          && text(request.resource.data.productId, 256)
+          && text(request.resource.data.productName, 512)
+          && optionalText(request.resource.data, 'brand', 120)
+          && optionalText(request.resource.data, 'url', 4096)
+          && request.resource.data.updatedBy == request.auth.uid
+          && request.resource.data.updatedAt == request.time;
+        allow delete: if member(householdId);
+      }
       match /lists/{listId} {
         allow read: if member(householdId);
         allow create: if signedIn() && memberAfter(householdId)

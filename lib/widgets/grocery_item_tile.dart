@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/grocery_item_model.dart';
 import '../providers/grocery_list_provider.dart';
 import 'add_item_dialog.dart';
+import 'carrefour_price_sheet.dart';
 
 class GroceryItemTile extends ConsumerWidget {
   const GroceryItemTile({super.key, required this.item});
@@ -38,10 +39,16 @@ class GroceryItemTile extends ConsumerWidget {
             title: const Text('Delete Item?'),
             content: Text('Remove "${item.name}" from your list?'),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
               TextButton(
                 onPressed: () => Navigator.pop(context, true),
-                child: Text('Delete', style: TextStyle(color: theme.colorScheme.error)),
+                child: Text(
+                  'Delete',
+                  style: TextStyle(color: theme.colorScheme.error),
+                ),
               ),
             ],
           ),
@@ -53,10 +60,15 @@ class GroceryItemTile extends ConsumerWidget {
           margin: const EdgeInsets.only(bottom: 8),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
-            color: isDark ? theme.colorScheme.surfaceContainer : const Color(0xFFF1F5EB),
+            color: isDark
+                ? theme.colorScheme.surfaceContainer
+                : const Color(0xFFF1F5EB),
             borderRadius: BorderRadius.circular(16),
             border: item.isDeal
-                ? Border.all(color: theme.colorScheme.secondary.withValues(alpha: 0.5), width: 1.5)
+                ? Border.all(
+                    color: theme.colorScheme.secondary.withValues(alpha: 0.5),
+                    width: 1.5,
+                  )
                 : null,
           ),
           child: Row(
@@ -67,14 +79,26 @@ class GroceryItemTile extends ConsumerWidget {
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(8),
                     child: item.imageUrl!.startsWith('http')
-                        ? Image.network(item.imageUrl!, width: 40, height: 40, fit: BoxFit.cover)
-                        : Image.file(File(item.imageUrl!), width: 40, height: 40, fit: BoxFit.cover),
+                        ? Image.network(
+                            item.imageUrl!,
+                            width: 40,
+                            height: 40,
+                            fit: BoxFit.cover,
+                          )
+                        : Image.file(
+                            File(item.imageUrl!),
+                            width: 40,
+                            height: 40,
+                            fit: BoxFit.cover,
+                          ),
                   ),
                 ),
               Checkbox(
                 value: item.isChecked,
                 onChanged: (_) => controller.toggleItem(item),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(4),
+                ),
                 visualDensity: VisualDensity.compact,
                 activeColor: theme.colorScheme.primary,
               ),
@@ -90,7 +114,9 @@ class GroceryItemTile extends ConsumerWidget {
                         item.name,
                         style: theme.textTheme.bodyLarge?.copyWith(
                           fontWeight: FontWeight.bold,
-                          decoration: item.isChecked ? TextDecoration.lineThrough : null,
+                          decoration: item.isChecked
+                              ? TextDecoration.lineThrough
+                              : null,
                           fontSize: 15,
                           color: isDark ? theme.colorScheme.onSurface : null,
                         ),
@@ -98,12 +124,41 @@ class GroceryItemTile extends ConsumerWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 2),
-                      Text(
-                        '${item.quantity} ${item.unit}${item.price > 0 ? ' • ${item.price.toStringAsFixed(2)} EGP/${item.unit}' : ''}',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
-                          fontSize: 11,
-                        ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              '${item.quantity} ${item.unit}${item.price > 0 ? ' • ${item.price.toStringAsFixed(2)} EGP/${item.unit}' : ''}${item.store == 'Carrefour' ? ' • Carrefour' : ''}',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant
+                                    .withValues(alpha: 0.7),
+                                fontSize: 11,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          IconButton(
+                            tooltip: 'Browse Carrefour prices',
+                            icon: const Icon(
+                              Icons.price_check_outlined,
+                              size: 18,
+                            ),
+                            visualDensity: VisualDensity.compact,
+                            constraints: const BoxConstraints.tightFor(
+                              width: 32,
+                              height: 28,
+                            ),
+                            padding: EdgeInsets.zero,
+                            onPressed: () => showCarrefourPrices(
+                              context: context,
+                              itemName: item.name,
+                              unit: item.unit,
+                              onSelect: (product) => controller
+                                  .selectCarrefourProduct(item, product),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -116,7 +171,8 @@ class GroceryItemTile extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Text(
-                        (item.price * (double.tryParse(item.quantity) ?? 1.0)).toStringAsFixed(2),
+                        (item.price * (double.tryParse(item.quantity) ?? 1.0))
+                            .toStringAsFixed(2),
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
@@ -136,9 +192,9 @@ class GroceryItemTile extends ConsumerWidget {
                 ),
               Container(
                 decoration: BoxDecoration(
-                  color: isDark 
-                    ? theme.colorScheme.surfaceContainerHigh 
-                    : Colors.grey.shade200,
+                  color: isDark
+                      ? theme.colorScheme.surfaceContainerHigh
+                      : Colors.grey.shade200,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -146,24 +202,39 @@ class GroceryItemTile extends ConsumerWidget {
                   children: [
                     IconButton(
                       icon: Icon(
-                        (double.tryParse(item.quantity) ?? 1.0) > 1 ? Icons.remove : Icons.delete_outline,
+                        (double.tryParse(item.quantity) ?? 1.0) > 1
+                            ? Icons.remove
+                            : Icons.delete_outline,
                         size: 14,
                       ),
                       onPressed: () async {
                         final q = double.tryParse(item.quantity) ?? 1.0;
                         if (q > 1) {
-                          controller.updateItem(item.copyWith(quantity: (q - 1).toString()));
+                          controller.updateItem(
+                            item.copyWith(quantity: (q - 1).toString()),
+                          );
                         } else {
                           final confirmed = await showDialog<bool>(
                             context: context,
                             builder: (context) => AlertDialog(
                               title: const Text('Delete Item?'),
-                              content: Text('Remove "${item.name}" from your list?'),
+                              content: Text(
+                                'Remove "${item.name}" from your list?',
+                              ),
                               actions: [
-                                TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+                                TextButton(
+                                  onPressed: () =>
+                                      Navigator.pop(context, false),
+                                  child: const Text('Cancel'),
+                                ),
                                 TextButton(
                                   onPressed: () => Navigator.pop(context, true),
-                                  child: Text('Delete', style: TextStyle(color: theme.colorScheme.error)),
+                                  child: Text(
+                                    'Delete',
+                                    style: TextStyle(
+                                      color: theme.colorScheme.error,
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
@@ -173,11 +244,14 @@ class GroceryItemTile extends ConsumerWidget {
                           }
                         }
                       },
-                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                      constraints: const BoxConstraints(
+                        minWidth: 32,
+                        minHeight: 32,
+                      ),
                       padding: EdgeInsets.zero,
-                      color: (double.tryParse(item.quantity) ?? 1.0) > 1 
-                        ? (isDark ? theme.colorScheme.onSurface : null)
-                        : theme.colorScheme.error,
+                      color: (double.tryParse(item.quantity) ?? 1.0) > 1
+                          ? (isDark ? theme.colorScheme.onSurface : null)
+                          : theme.colorScheme.error,
                     ),
                     Text(
                       item.quantity,
@@ -190,9 +264,14 @@ class GroceryItemTile extends ConsumerWidget {
                       icon: const Icon(Icons.add, size: 14),
                       onPressed: () {
                         final q = double.tryParse(item.quantity) ?? 1.0;
-                        controller.updateItem(item.copyWith(quantity: (q + 1).toString()));
+                        controller.updateItem(
+                          item.copyWith(quantity: (q + 1).toString()),
+                        );
                       },
-                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                      constraints: const BoxConstraints(
+                        minWidth: 32,
+                        minHeight: 32,
+                      ),
                       padding: EdgeInsets.zero,
                       color: isDark ? theme.colorScheme.onSurface : null,
                     ),
