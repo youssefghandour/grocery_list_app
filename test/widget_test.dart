@@ -86,4 +86,12 @@ void main() {
       'abc123',
     );
   });
+  testWidgets('Forgot password button opens reset dialog', (tester) async {
+    await pump(tester, const LoginScreen());
+    expect(find.text('Forgot password?'), findsOneWidget);
+    await tester.tap(find.text('Forgot password?'));
+    await tester.pumpAndSettle();
+    expect(find.text('Reset Password'), findsOneWidget);
+    expect(find.text('Send Reset Link'), findsOneWidget);
+  });
 }
