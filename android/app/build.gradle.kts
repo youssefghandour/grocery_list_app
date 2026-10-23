@@ -52,6 +52,26 @@ configure<ApplicationExtension> {
     }
 }
 
+// Source - https://stackoverflow.com/a/70313152
+// Posted by kunlinwang, modified by community. See post 'Timeline' for change history
+// Retrieved 2026-10-23, License - CC BY-SA 4.0
+
+afterEvaluate {
+    if (project.hasProperty("android.injected.signing.store.file")) {
+        println ("key store path: ${project.property("android.injected.signing.store.file")}")
+    }
+    if (project.hasProperty("android.injected.signing.store.password")) {
+        println ("key store password: ${project.property("android.injected.signing.store.password")}")
+    }
+    if (project.hasProperty("android.injected.signing.key.alias")) {
+        println ("key alias: ${project.property("android.injected.signing.key.alias")}")
+    }
+    if (project.hasProperty("android.injected.signing.key.password")) {
+        println ("key password: ${project.property("android.injected.signing.key.password")}")
+    }
+}
+
+
 // Fixed top-level Kotlin configuration signature block
 kotlin {
     compilerOptions {

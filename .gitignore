@@ -33,6 +33,7 @@
 /android/key.properties
 *.keystore
 *.jks
+android/app/release
 
 # iOS-specific
 /ios/Flutter/Generated.xcconfig
